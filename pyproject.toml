@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "crypto_crawler"
+version = "0.1.0"
+description = "A tool for crawling, processing, and storing cryptocurrency API documentation"
+readme = "README.md"
+authors = [
+    {name = "Crypto Crawler Team"}
+]
+requires-python = ">=3.11"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/yourusername/crypto_crawler"
+"Bug Tracker" = "https://github.com/yourusername/crypto_crawler/issues"
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+
+[tool.isort]
+profile = "black"
+line_length = 100

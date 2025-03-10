@@ -21,10 +21,10 @@ create table crypto_api_site_pages (
 create index on crypto_api_site_pages using ivfflat (embedding vector_cosine_ops);
 
 -- Create an index on metadata for faster filtering
-create index idx_site_pages_metadata on crypto_api_site_pages using gin (metadata);
+create index idx_crypto_api_site_pages_metadata on crypto_api_site_pages using gin (metadata);
 
 -- Create a function to search for documentation chunks
-create function match_site_pages (
+create function match_crypto_api_site_pages (
   query_embedding vector(1536),
   match_count int default 10,
   filter jsonb DEFAULT '{}'::jsonb

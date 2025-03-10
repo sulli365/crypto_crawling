@@ -1,0 +1,88 @@
+# Crypto API Documentation Crawler - Project Rules
+
+## Project Structure
+
+- The project follows a modular structure with separate files for different components
+- Core functionality is implemented in Python files at the root level
+- Examples are stored in the `crawl4AI-examples` directory
+- Error logs are stored in the `error_logs` directory
+- Memory Bank files are stored in the `memory-bank` directory
+
+## Naming Conventions
+
+- Python files use snake_case for filenames (e.g., `crawl_crypto_api_docs.py`)
+- Classes use PascalCase (e.g., `CryptoApiConfig`)
+- Functions and variables use snake_case (e.g., `process_chunk`)
+- Constants use UPPER_SNAKE_CASE (e.g., `MAX_RETRIES`)
+
+## Code Patterns
+
+- Asynchronous programming is used throughout the project with `asyncio`
+- Configuration is managed through dataclasses in `crypto_api_config.py`
+- Error handling uses the `ErrorLogger` class from `error_logger.py`
+- Database operations are encapsulated in dedicated functions
+- The project uses a pipeline pattern for data processing
+
+## API Interaction Patterns
+
+- API configurations are stored in `crypto_api_configs.json`
+- Each API has its own configuration with parameters for crawling
+- URL discovery uses either sitemap-based or crawl-based approaches
+- Rate limiting is implemented with configurable delays and exponential backoff
+- Parallel processing is used with configurable concurrency limits
+
+## Database Patterns
+
+- Supabase is used as the vector database
+- The `crypto_api_site_pages` table stores documentation chunks
+- Vector similarity search is implemented with pgvector
+- Metadata is stored as JSON for flexible filtering
+- Row-level security is implemented for data protection
+
+## RAG Agent Patterns
+
+- The RAG agent is implemented using the pydantic-ai framework
+- The agent uses a tool-based architecture for flexible functionality
+- Documentation retrieval is based on vector similarity search
+- The agent maintains conversation context across interactions
+- Response streaming is used for better user experience
+
+## UI Patterns
+
+- Streamlit is used for the user interface
+- The UI follows a chat-based interaction model
+- Message history is maintained in session state
+- Response streaming is implemented for better UX
+- The UI will eventually support filtering by API
+
+## Error Handling Patterns
+
+- Errors are categorized by type (rate limit, connection, parsing, general)
+- Error logs are stored in markdown format for readability
+- Each API has its own error log file
+- Error summaries provide an overview of system health
+- Retry mechanisms are implemented for recoverable errors
+
+## Development Workflow
+
+- Environment variables are stored in a `.env` file (not committed to version control)
+- The `.env.example` file provides a template for required environment variables
+- Virtual environment is used for dependency management
+- Requirements are specified in `requirements.txt`
+- SQL schema is defined in `site_pages.sql`
+- Windows/PowerShell syntax should always be used for executing commands in the terminal
+- Command chaining in PowerShell uses semicolons (`;`) rather than ampersands (`&&`)
+
+## Testing Patterns
+
+- Basic testing is implemented in `run_test.py`
+- More comprehensive testing will be added in the future
+- Manual testing is currently used for validating crawling results
+- Error logs are used to identify and fix issues
+
+## Documentation Patterns
+
+- Memory Bank files provide comprehensive project documentation
+- README.md provides an overview of the project
+- Code includes docstrings for functions and classes
+- Error logs provide documentation of issues encountered

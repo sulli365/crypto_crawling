@@ -1,5 +1,5 @@
+#!/usr/bin/env python
 import os
-import sys
 import json
 import asyncio
 import argparse
@@ -10,17 +10,14 @@ from datetime import datetime, timezone
 from urllib.parse import urlparse
 from dotenv import load_dotenv
 
-# Add the current directory to the path to ensure imports work
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
 from crawl4ai import AsyncWebCrawler, BrowserConfig, CrawlerRunConfig, CacheMode
 from openai import AsyncOpenAI
 from supabase import create_client, Client
 
-# Import our custom modules
-from crypto_api_config import CryptoApiConfig, load_crypto_api_configs, save_crypto_api_configs
-from url_extractor import get_crypto_api_urls
-from error_logger import logger
+# Import from our package
+from crypto_crawler.api.config import CryptoApiConfig, load_crypto_api_configs, save_crypto_api_configs
+from crypto_crawler.crawling.url_extractor import get_crypto_api_urls
+from crypto_crawler.utils.error_logger import logger
 
 load_dotenv()
 
@@ -319,7 +316,8 @@ async def main():
         
     # Explore a URL if requested
     if args.explore:
-        from explore_api_url import explore_url, check_sitemap
+        # Import here to avoid circular imports
+        from crypto_crawler.scripts.explore_api_url import explore_url, check_sitemap
         
         print(f"Exploring URL: {args.explore}")
         has_sitemap = await check_sitemap(args.explore)
