@@ -24,8 +24,13 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "crypto-crawler=crypto_crawler.crawling.crawler:main",
+            "crypto-crawler=main:main",  # Main entry point
+            "crypto-crawl=crypto_crawler.crawling.crawler:main",
             "crypto-ui=crypto_crawler.ui.streamlit_app:main",
         ],
+    },
+    include_package_data=True,
+    package_data={
+        "crypto_crawler": ["config/*", "docs/*"],
     },
 )

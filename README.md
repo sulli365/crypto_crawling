@@ -22,6 +22,46 @@ This project extends the Pydantic AI documentation crawler to work with multiple
 - Configurable crawling depth and patterns
 - API selection mechanism for targeted crawling
 
+## Project Structure
+
+The project follows a modern Python package structure with a src-layout approach:
+
+```
+crypto_crawler/
+├── src/
+│   └── crypto_crawler/
+│       ├── __init__.py
+│       ├── api/
+│       │   ├── __init__.py
+│       │   ├── config.py
+│       │   └── expert.py
+│       ├── crawling/
+│       │   ├── __init__.py
+│       │   ├── crawler.py
+│       │   └── url_extractor.py
+│       ├── utils/
+│       │   ├── __init__.py
+│       │   └── error_logger.py
+│       ├── ui/
+│       │   ├── __init__.py
+│       │   └── streamlit_app.py
+│       └── scripts/
+│           ├── __init__.py
+│           ├── explore_api_url.py
+│           ├── generate_api_configs.py
+│           ├── run_test.py
+│           └── test_supabase_connection.py
+├── config/
+│   ├── crypto_api_configs.json
+│   └── site_pages.sql
+├── docs/
+│   └── crypto-apis.md
+├── error_logs/
+├── main.py
+├── setup.py
+└── pyproject.toml
+```
+
 ## Prerequisites
 
 - Python 3.11+
@@ -31,12 +71,31 @@ This project extends the Pydantic AI documentation crawler to work with multiple
 
 ## Installation
 
+### Development Installation
+
 1. Clone the repository
-2. Install dependencies:
+2. Create and activate a virtual environment:
+   ```bash
+   python -m venv venv
+   # On Windows
+   venv\Scripts\activate
+   # On Unix/MacOS
+   source venv/bin/activate
+   ```
+3. Install in development mode:
+   ```bash
+   pip install -e .
+   ```
+
+### User Installation
+
 ```bash
-pip install -r requirements.txt
+pip install git+https://github.com/yourusername/crypto_crawler.git
 ```
-3. Set up environment variables:
+
+## Configuration
+
+1. Set up environment variables:
    - Rename `.env.example` to `.env`
    - Add your API keys:
    ```
@@ -46,47 +105,31 @@ pip install -r requirements.txt
    LLM_MODEL=gpt-4o-mini  # or your preferred model
    ```
 
-## Database Setup
-
-Execute the SQL commands in `site_pages.sql` to:
-1. Create the necessary tables
-2. Enable vector similarity search
-3. Set up Row Level Security policies
+2. Database Setup:
+   Execute the SQL commands in `config/site_pages.sql` to:
+   - Create the necessary tables
+   - Enable vector similarity search
+   - Set up Row Level Security policies
 
 ## Usage
 
+The project provides a command-line interface through the `main.py` script:
+
 ### Generating API Configurations
 
-Before crawling, you need to generate configurations for the APIs:
-
 ```bash
-python generate_api_configs.py
+python main.py generate-configs
 ```
 
 This will:
-1. Parse the `crypto-apis.md` file
+1. Parse the `docs/crypto-apis.md` file
 2. Create a configuration for each API
-3. Save them to `crypto_api_configs.json`
-
-For more detailed analysis of each API (recommended):
-
-```bash
-python generate_api_configs.py --analyze
-```
-
-This will:
-1. Visit each API documentation site
-2. Check for sitemaps
-3. Analyze URL patterns
-4. Recommend crawling depth
-5. Generate optimized configurations
+3. Save them to `config/crypto_api_configs.json`
 
 ### Exploring a Specific API
 
-To analyze a single API documentation site:
-
 ```bash
-python crawl_crypto_api_docs.py --explore https://api-site.com/docs
+python main.py explore https://api-site.com/docs --depth 2
 ```
 
 This will:
@@ -100,34 +143,48 @@ This will:
 To crawl all configured APIs:
 
 ```bash
-python crawl_crypto_api_docs.py
+python main.py crawl
 ```
 
 To crawl a specific API:
 
 ```bash
-python crawl_crypto_api_docs.py --api CoinGecko
+python main.py crawl --api CoinGecko
 ```
 
-To crawl APIs in a specific category:
+To limit the number of URLs processed:
 
 ```bash
-python crawl_crypto_api_docs.py --category market_data
+python main.py crawl --max-urls 50
 ```
 
-To limit the number of APIs processed:
+To adjust concurrency:
 
 ```bash
-python crawl_crypto_api_docs.py --max-apis 3
+python main.py crawl --concurrency 3
 ```
 
-To list all available APIs:
+### Running the UI
 
 ```bash
-python crawl_crypto_api_docs.py --list
+python main.py ui
 ```
 
-### Error Handling
+Or with a custom port:
+
+```bash
+python main.py ui --port 8502
+```
+
+## Command-line Scripts
+
+After installation, the following command-line scripts are available:
+
+- `crypto-crawler`: Main entry point with all commands
+- `crypto-crawl`: Direct access to the crawler functionality
+- `crypto-ui`: Launch the Streamlit UI
+
+## Error Handling
 
 Errors are logged to markdown files in the `error_logs` directory, organized by API name. Each error includes:
 - Timestamp
@@ -135,20 +192,11 @@ Errors are logged to markdown files in the `error_logs` directory, organized by 
 - URL
 - Error message
 
-## Components
-
-- `crawl_crypto_api_docs.py`: Main crawler script
-- `crypto_api_config.py`: API configuration management
-- `url_extractor.py`: URL discovery and filtering
-- `error_logger.py`: Error logging and reporting
-- `explore_api_url.py`: API documentation analysis
-- `generate_api_configs.py`: Configuration generation
-
 ## Customization
 
 ### Adjusting Crawling Parameters
 
-Edit `crypto_api_configs.json` to customize:
+Edit `config/crypto_api_configs.json` to customize:
 - `max_depth`: How deep to crawl (1-3 recommended)
 - `delay_between_requests`: Seconds to wait between requests (higher = slower but less likely to hit rate limits)
 - `max_retries`: Number of retry attempts for rate-limited requests
@@ -156,8 +204,8 @@ Edit `crypto_api_configs.json` to customize:
 
 ### Adding New APIs
 
-1. Add the API to `crypto-apis.md` following the existing format
-2. Run `python generate_api_configs.py --analyze` to update configurations
+1. Add the API to `docs/crypto-apis.md` following the existing format
+2. Run `python main.py generate-configs` to update configurations
 
 ## Troubleshooting
 
@@ -165,7 +213,7 @@ Edit `crypto_api_configs.json` to customize:
 
 If you encounter rate limiting:
 1. Increase `delay_between_requests` in the API's configuration
-2. Reduce `max_concurrent` in `crawl_parallel()` function
+2. Reduce `concurrency` when running the crawl command
 3. Try crawling during off-peak hours
 
 ### Missing Content
@@ -174,7 +222,24 @@ If documentation is missing:
 1. Check the error logs for that API
 2. Verify URL patterns are correct
 3. Try increasing `max_depth` for more thorough crawling
-4. Manually explore the site with `--explore` to identify issues
+4. Manually explore the site with the explore command to identify issues
+
+## Development
+
+### Running Tests
+
+```bash
+pytest
+```
+
+### Code Formatting
+
+The project uses Black and isort for code formatting:
+
+```bash
+black src/
+isort src/
+```
 
 ## Future Improvements
 

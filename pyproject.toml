@@ -16,10 +16,29 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
+dependencies = [
+    "aiofiles>=24.1.0",
+    "aiohttp>=3.11.0",
+    "beautifulsoup4>=4.12.0",
+    "Crawl4AI>=0.4.247",
+    "openai>=1.59.0",
+    "pydantic>=2.10.0",
+    "pydantic-ai>=0.0.18",
+    "python-dotenv>=1.0.0",
+    "streamlit>=1.41.0",
+    "supabase>=2.11.0",
+    "tiktoken>=0.8.0",
+    "playwright>=1.49.0",
+]
 
 [project.urls]
 "Homepage" = "https://github.com/yourusername/crypto_crawler"
 "Bug Tracker" = "https://github.com/yourusername/crypto_crawler/issues"
+
+[project.scripts]
+crypto-crawler = "main:main"
+crypto-crawl = "crypto_crawler.crawling.crawler:main"
+crypto-ui = "crypto_crawler.ui.streamlit_app:main"
 
 [tool.black]
 line-length = 100

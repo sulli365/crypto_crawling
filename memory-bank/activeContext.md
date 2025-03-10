@@ -7,7 +7,7 @@ The project is currently in the early development phase, with a focus on establi
 1. **Extending API Coverage**: Building on the successful implementation with CoinGecko API to cover all 20+ cryptocurrency APIs.
 2. **Refining the RAG Agent**: Updating the agent to properly query and retrieve information from the crypto API documentation database.
 3. **Enhancing the User Interface**: Improving the Streamlit UI for a better user experience.
-4. **Project Structure Reorganization**: Implementing a proper Python package structure for better maintainability and scalability.
+4. **Project Structure Refinement**: Fine-tuning the Python package structure and ensuring all components work together seamlessly.
 
 ## Recent Developments
 
@@ -33,6 +33,10 @@ The project is currently in the early development phase, with a focus on establi
    - Created modular organization with api, crawling, utils, ui, and scripts subpackages
    - Added setup.py and pyproject.toml for package installation
    - Updated imports to reflect the new structure
+   - Moved configuration files to the config/ directory
+   - Moved documentation to the docs/ directory
+   - Created a main entry point script at the project root
+   - Updated README with comprehensive installation and usage instructions
 
 ### In Progress
 
@@ -46,10 +50,10 @@ The project is currently in the early development phase, with a focus on establi
    - Implementing tools for retrieving relevant documentation
    - Testing query understanding and response generation
 
-3. **Package Structure Refinement**:
-   - Moving configuration files to the config/ directory
-   - Moving documentation to the docs/ directory
-   - Creating a main entry point script at the project root
+3. **Command-line Interface Enhancement**:
+   - Implementing additional CLI commands and options
+   - Adding better error handling and user feedback
+   - Creating comprehensive help documentation
 
 ## Key Decisions
 
@@ -77,6 +81,17 @@ The project is currently in the early development phase, with a focus on establi
    - Decision: Adopt a src-layout Python package structure
    - Rationale: Follows modern Python packaging best practices and improves maintainability
    - Implementation: Organized code into logical modules (api, crawling, utils, ui, scripts)
+   - Added proper entry points for command-line scripts
+
+6. **Configuration Management**:
+   - Decision: Move configuration files to a dedicated config/ directory
+   - Rationale: Separates configuration from code for better maintainability
+   - Implementation: Updated path handling in code to reference the new locations
+
+7. **Main Entry Point**:
+   - Decision: Create a unified main.py script with command-line interface
+   - Rationale: Provides a single entry point for all functionality
+   - Implementation: Used argparse to create a comprehensive CLI with subcommands
 
 ## Current Challenges
 
@@ -119,10 +134,10 @@ The project is currently in the early development phase, with a focus on establi
    - Add filtering options for specific APIs
    - Implement source attribution for responses
 
-4. **Finalize Project Structure**:
-   - Complete the reorganization of configuration and documentation files
-   - Create a comprehensive README with installation and usage instructions
-   - Implement automated tests for key components
+4. **Implement Automated Tests**:
+   - Create unit tests for core components
+   - Implement integration tests for the full pipeline
+   - Set up CI/CD for automated testing
 
 ### Medium-Term (Next 2-4 Weeks)
 
