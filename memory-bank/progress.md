@@ -81,6 +81,7 @@
    - ✅ Basic agent structure
    - ✅ Tool-based architecture
    - 🔄 Documentation retrieval tool
+   - ❌ Tool registration with pydantic-ai
    - ❌ Specialized query tools
    - ❌ Code generation capabilities
 
@@ -122,17 +123,23 @@
 
 ### RAG Agent Enhancement
 
-1. **Query Understanding**
+1. **Tool Registration**
+   - Fix pydantic-ai tool registration issues
+   - Install package in development mode
+   - Create minimal example to verify functionality
+   - Update agent implementation based on findings
+
+2. **Query Understanding**
    - Improve intent recognition
    - Handle cryptocurrency-specific terminology
    - Support complex queries spanning multiple APIs
 
-2. **Retrieval Optimization**
+3. **Retrieval Optimization**
    - Fine-tune vector search parameters
    - Implement hybrid retrieval (vector + keyword)
    - Add context-aware filtering
 
-3. **Response Generation**
+4. **Response Generation**
    - Improve response formatting
    - Add code examples based on documentation
    - Implement API comparison capabilities
@@ -227,31 +234,43 @@ The project is currently in the **early development phase**, with focus on:
    - Need to optimize indexing
    - Connection management needs improvement
 
+5. **RAG Agent Tool Registration**
+   - Tools defined with `@crypto_api_expert.tool` decorator aren't being properly registered
+   - Agent doesn't expose tools as direct attributes
+   - Need to investigate pydantic-ai documentation for correct tool access methods
+   - Package may need to be installed in development mode
+
 ## Next Priorities
 
-1. **Test the reorganized project structure**
+1. **Fix RAG agent tool registration issues**
+   - Investigate pydantic-ai documentation for correct tool access methods
+   - Install package in development mode (`pip install -e .`)
+   - Create minimal example to verify basic functionality
+   - Update agent implementation based on findings
+
+2. **Test the reorganized project structure**
    - Verify that all components work together
    - Test the command-line interface
    - Ensure proper package installation
 
-2. **Complete crawling of 5 major APIs**
+3. **Complete crawling of 5 major APIs**
    - CoinMarketCap
    - CryptoCompare
    - Binance
    - Messari
    - CoinAPI.io
 
-3. **Update RAG agent to work with crypto API documentation**
+4. **Update RAG agent to work with crypto API documentation**
    - Fix metadata filtering in retrieve_relevant_documentation tool
    - Update system prompt for cryptocurrency context
    - Implement API selection capability
 
-4. **Enhance Streamlit UI**
+5. **Enhance Streamlit UI**
    - Add API selection dropdown
    - Improve response formatting
    - Implement source attribution
 
-5. **Optimize performance**
+6. **Optimize performance**
    - Profile and optimize crawling memory usage
    - Improve vector search performance
    - Implement caching for frequent queries

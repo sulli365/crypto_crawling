@@ -48,6 +48,7 @@ The project is currently in the early development phase, with a focus on establi
 2. **RAG Agent Development**:
    - Updating the agent to work with the crypto API documentation
    - Implementing tools for retrieving relevant documentation
+   - Debugging tool registration issues with pydantic-ai
    - Testing query understanding and response generation
 
 3. **Command-line Interface Enhancement**:
@@ -115,6 +116,12 @@ The project is currently in the early development phase, with a focus on establi
    - Need to optimize indexing and query parameters
    - Monitoring query performance as the database grows
 
+5. **RAG Agent Tool Registration**:
+   - Tools defined with `@crypto_api_expert.tool` decorator aren't being properly registered
+   - Agent doesn't expose tools as direct attributes (list_available_apis, retrieve_relevant_documentation, etc.)
+   - Need to investigate pydantic-ai documentation for correct tool access methods
+   - May need to install package in development mode for proper module discovery
+
 ## Next Steps
 
 ### Immediate (Next 1-2 Weeks)
@@ -124,17 +131,23 @@ The project is currently in the early development phase, with a focus on establi
    - Optimize crawling parameters for each API
    - Implement monitoring for crawling progress
 
-2. **Enhance RAG Agent**:
+2. **Fix RAG Agent Tool Registration**:
+   - Investigate pydantic-ai documentation for correct tool access methods
+   - Install package in development mode (`pip install -e .`)
+   - Create minimal example to verify basic functionality
+   - Update agent implementation based on findings
+
+3. **Enhance RAG Agent**:
    - Update the agent to work with the crypto API documentation
    - Implement specialized tools for different query types
    - Test with a variety of cryptocurrency-related queries
 
-3. **Improve User Interface**:
+4. **Improve User Interface**:
    - Enhance the Streamlit UI with better formatting
    - Add filtering options for specific APIs
    - Implement source attribution for responses
 
-4. **Implement Automated Tests**:
+5. **Implement Automated Tests**:
    - Create unit tests for core components
    - Implement integration tests for the full pipeline
    - Set up CI/CD for automated testing

@@ -293,6 +293,22 @@ async def process_api(api_config: CryptoApiConfig):
     
     print(f"Completed processing for {api_config.name}")
 
+async def crawl_api_documentation(api_config: CryptoApiConfig, urls: List[str], concurrency: int = 5):
+    """
+    Crawl API documentation for a specific API configuration.
+    
+    Args:
+        api_config: The API configuration to use
+        urls: List of URLs to crawl
+        concurrency: Maximum number of concurrent requests
+        
+    Returns:
+        None
+    """
+    print(f"Crawling documentation for {api_config.name} with {len(urls)} URLs...")
+    await crawl_parallel(urls, api_config, concurrency)
+    print(f"Finished crawling documentation for {api_config.name}")
+
 async def main():
     parser = argparse.ArgumentParser(description="Crawl cryptocurrency API documentation")
     parser.add_argument("--api", help="Specific API to crawl (by name)")

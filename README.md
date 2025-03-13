@@ -1,26 +1,14 @@
 # Crypto API Documentation Crawler
 
-A system for crawling, processing, and storing cryptocurrency API documentation in a vector database for RAG (Retrieval-Augmented Generation) applications.
-
-## Overview
-
-This project extends the Pydantic AI documentation crawler to work with multiple cryptocurrency API documentation sites. It:
-
-1. Crawls API documentation websites
-2. Processes content into semantic chunks
-3. Generates embeddings for each chunk
-4. Stores everything in a Supabase vector database
-5. Provides a RAG interface for querying the documentation
+A specialized RAG (Retrieval-Augmented Generation) application designed to crawl, process, and store documentation from 20+ cryptocurrency API providers. This system enables users to query information about different cryptocurrencies through a unified interface, leveraging the power of large language models and vector search.
 
 ## Features
 
-- Support for 20+ cryptocurrency API documentation sites
-- Intelligent URL discovery (sitemap or crawling)
-- Smart content chunking that preserves code blocks and context
-- Rate limiting with exponential backoff for retries
-- Error logging and reporting
-- Configurable crawling depth and patterns
-- API selection mechanism for targeted crawling
+- Crawls and indexes documentation from 20+ cryptocurrency API providers
+- Processes content with intelligent chunking that preserves code examples and context
+- Stores processed content in a vector database for semantic search
+- Provides an agentic RAG interface for querying cryptocurrency API information
+- Supports natural language queries about cryptocurrency APIs
 
 ## Project Structure
 
@@ -50,200 +38,112 @@ crypto_crawler/
 │           ├── explore_api_url.py
 │           ├── generate_api_configs.py
 │           ├── run_test.py
-│           └── test_supabase_connection.py
+│           └── test_rag_agent.py
 ├── config/
 │   ├── crypto_api_configs.json
 │   └── site_pages.sql
 ├── docs/
 │   └── crypto-apis.md
+├── examples/
+│   └── crawl4AI-examples/
 ├── error_logs/
-├── main.py
+├── memory-bank/
 ├── setup.py
 └── pyproject.toml
 ```
 
-## Prerequisites
-
-- Python 3.11+
-- Supabase account and database
-- OpenAI API key
-- Crawl4AI library
-
 ## Installation
 
-### Development Installation
-
-1. Clone the repository
-2. Create and activate a virtual environment:
-   ```bash
-   python -m venv venv
-   # On Windows
-   venv\Scripts\activate
-   # On Unix/MacOS
-   source venv/bin/activate
-   ```
-3. Install in development mode:
-   ```bash
-   pip install -e .
-   ```
-
-### User Installation
+1. Clone the repository:
 
 ```bash
-pip install git+https://github.com/yourusername/crypto_crawler.git
+git clone https://github.com/yourusername/crypto-crawler.git
+cd crypto-crawler
 ```
 
-## Configuration
+2. Create and activate a virtual environment:
 
-1. Set up environment variables:
-   - Rename `.env.example` to `.env`
-   - Add your API keys:
-   ```
-   OPENAI_API_KEY=your_openai_api_key
-   SUPABASE_URL=your_supabase_url
-   SUPABASE_SERVICE_KEY=your_supabase_service_key
-   LLM_MODEL=gpt-4o-mini  # or your preferred model
-   ```
+```bash
+python -m venv venv
+.\venv\Scripts\activate  # Windows
+source venv/bin/activate  # Linux/Mac
+```
 
-2. Database Setup:
-   Execute the SQL commands in `config/site_pages.sql` to:
-   - Create the necessary tables
-   - Enable vector similarity search
-   - Set up Row Level Security policies
+3. Install the package in development mode:
+
+```bash
+pip install -e .
+```
+
+4. Set up environment variables:
+
+Create a `.env` file in the project root with the following variables:
+
+```
+OPENAI_API_KEY=your_openai_api_key
+SUPABASE_URL=your_supabase_url
+SUPABASE_SERVICE_KEY=your_supabase_service_key
+LLM_MODEL=gpt-4o-mini  # or preferred model
+```
+
+5. Set up the database:
+
+Run the SQL scripts in the `config` directory to set up the database schema and functions.
 
 ## Usage
 
-The project provides a command-line interface through the `main.py` script:
-
-### Generating API Configurations
-
-```bash
-python main.py generate-configs
-```
-
-This will:
-1. Parse the `docs/crypto-apis.md` file
-2. Create a configuration for each API
-3. Save them to `config/crypto_api_configs.json`
-
-### Exploring a Specific API
-
-```bash
-python main.py explore https://api-site.com/docs --depth 2
-```
-
-This will:
-1. Check if the site has a sitemap
-2. Analyze internal links
-3. Recommend URL patterns
-4. Suggest optimal crawling depth
-
 ### Crawling API Documentation
 
-To crawl all configured APIs:
-
 ```bash
-python main.py crawl
-```
-
-To crawl a specific API:
-
-```bash
-python main.py crawl --api CoinGecko
-```
-
-To limit the number of URLs processed:
-
-```bash
-python main.py crawl --max-urls 50
-```
-
-To adjust concurrency:
-
-```bash
-python main.py crawl --concurrency 3
+python -m crypto_crawler crawl --api CoinGecko
 ```
 
 ### Running the UI
 
 ```bash
-python main.py ui
+python -m crypto_crawler ui
 ```
 
-Or with a custom port:
+### Testing the RAG Agent
 
 ```bash
-python main.py ui --port 8502
+python -m crypto_crawler.scripts.test_rag_agent
 ```
 
-## Command-line Scripts
+## Database Schema
 
-After installation, the following command-line scripts are available:
+The system uses a Supabase database with the following schema:
 
-- `crypto-crawler`: Main entry point with all commands
-- `crypto-crawl`: Direct access to the crawler functionality
-- `crypto-ui`: Launch the Streamlit UI
-
-## Error Handling
-
-Errors are logged to markdown files in the `error_logs` directory, organized by API name. Each error includes:
-- Timestamp
-- Error type (Rate Limit, Connection, Parsing, General)
-- URL
-- Error message
-
-## Customization
-
-### Adjusting Crawling Parameters
-
-Edit `config/crypto_api_configs.json` to customize:
-- `max_depth`: How deep to crawl (1-3 recommended)
-- `delay_between_requests`: Seconds to wait between requests (higher = slower but less likely to hit rate limits)
-- `max_retries`: Number of retry attempts for rate-limited requests
-- `url_patterns`: Regex patterns to filter documentation URLs
-
-### Adding New APIs
-
-1. Add the API to `docs/crypto-apis.md` following the existing format
-2. Run `python main.py generate-configs` to update configurations
-
-## Troubleshooting
-
-### Rate Limiting
-
-If you encounter rate limiting:
-1. Increase `delay_between_requests` in the API's configuration
-2. Reduce `concurrency` when running the crawl command
-3. Try crawling during off-peak hours
-
-### Missing Content
-
-If documentation is missing:
-1. Check the error logs for that API
-2. Verify URL patterns are correct
-3. Try increasing `max_depth` for more thorough crawling
-4. Manually explore the site with the explore command to identify issues
-
-## Development
-
-### Running Tests
-
-```bash
-pytest
+```sql
+create table crypto_api_site_pages (
+    id bigserial primary key,
+    url varchar not null,
+    chunk_number integer not null,
+    title varchar not null,
+    summary varchar not null,
+    content text not null,
+    metadata jsonb not null default '{}'::jsonb,
+    embedding vector(1536),
+    created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+    
+    unique(url, chunk_number)
+);
 ```
 
-### Code Formatting
+## RAG Agent
 
-The project uses Black and isort for code formatting:
+The RAG agent provides the following tools:
 
-```bash
-black src/
-isort src/
-```
+- `retrieve_relevant_documentation`: Retrieve relevant documentation chunks based on a query
+- `list_documentation_pages`: List available documentation pages
+- `get_page_content`: Get the full content of a specific documentation page
+- `list_available_apis`: List all available cryptocurrency APIs
+- `compare_api_endpoints`: Compare similar endpoints across different APIs
 
-## Future Improvements
+## Contributing
 
-- Support for authentication-required documentation
-- PDF documentation processing
-- Automatic categorization of API endpoints
-- Incremental updates to avoid re-crawling unchanged content
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
