@@ -12,14 +12,14 @@
   },
   {
     "name": "CoinMarketCap",
-    "base_url": "https://coinmarketcap.com/api/",
+    "base_url": "https://coinmarketcap.com/api/documentation/v1/",
     "category": "market_data",
     "has_sitemap": false,
     "sitemap_url": null,
-    "max_depth": 2,
-    "url_patterns": [],
-    "delay_between_requests": 1.0,
-    "max_retries": 3
+    "max_depth": 3,
+    "url_patterns": ["/api/documentation/", "/api/v1/"],
+    "delay_between_requests": 2.0,
+    "max_retries": 5
   },
   {
     "name": "CryptoCompare",

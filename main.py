@@ -18,7 +18,6 @@ from crypto_crawler.api.config import CryptoApiConfig, load_crypto_api_configs
 from crypto_crawler.crawling.url_extractor import get_crypto_api_urls
 from crypto_crawler.crawling.crawler import crawl_api_documentation
 from crypto_crawler.utils.error_logger import logger
-from crypto_crawler.ui.streamlit_app import run_streamlit_app
 
 def parse_args():
     """Parse command-line arguments."""
@@ -40,10 +39,6 @@ def parse_args():
     process_parser.add_argument("--api", help="API name to process (default: all)", default=None)
     process_parser.add_argument("--batch-size", type=int, help="Batch size for processing", default=10)
     
-    # UI command
-    ui_parser = subparsers.add_parser("ui", help="Run the Streamlit UI")
-    ui_parser.add_argument("--port", type=int, help="Port to run the UI on", default=8501)
-    
     # Explore command
     explore_parser = subparsers.add_parser("explore", help="Explore an API URL")
     explore_parser.add_argument("url", help="URL to explore")
@@ -52,17 +47,26 @@ def parse_args():
     # Generate configs command
     generate_parser = subparsers.add_parser("generate-configs", help="Generate API configurations")
     
+    # Cleanup command
+    cleanup_parser = subparsers.add_parser("cleanup", help="Clean up duplicate entries in the database")
+    cleanup_parser.add_argument("--api", help="API name to clean up (default: all)", default=None)
+    cleanup_parser.add_argument("--dry-run", action="store_true", help="Show what would be deleted without actually deleting")
+    
     return parser.parse_args()
 
 async def crawl_command(api_name: Optional[str] = None, max_urls: int = 100, concurrency: int = 5):
     """Run the crawl command."""
+    print("Loading API configurations...")
     configs = load_crypto_api_configs()
+    print(f"Loaded {len(configs)} API configurations")
     
     if api_name:
+        print(f"Filtering for API: {api_name}")
         configs = [config for config in configs if config.name.lower() == api_name.lower()]
         if not configs:
             print(f"Error: API '{api_name}' not found in configurations.")
             return
+        print(f"Found matching configuration for {api_name}")
     
     for config in configs:
         print(f"Crawling {config.name}...")
@@ -80,10 +84,6 @@ def process_command(api_name: Optional[str] = None, batch_size: int = 10):
     # This would be implemented to process the crawled documentation
     print("Processing command not yet implemented.")
 
-def ui_command(port: int = 8501):
-    """Run the UI command."""
-    run_streamlit_app(port)
-
 async def explore_command(url: str, depth: int = 2):
     """Run the explore command."""
     from crypto_crawler.scripts.explore_api_url import explore_url
@@ -94,6 +94,11 @@ def generate_configs_command():
     from crypto_crawler.scripts.generate_api_configs import generate_configs
     generate_configs()
 
+async def cleanup_command(api_name: Optional[str] = None, dry_run: bool = False):
+    """Clean up duplicate entries in the database."""
+    from crypto_crawler.utils.db_cleanup import cleanup_duplicates
+    await cleanup_duplicates(api_name, dry_run)
+
 async def main():
     """Main entry point."""
     args = parse_args()
@@ -102,12 +107,12 @@ async def main():
         await crawl_command(args.api, args.max_urls, args.concurrency)
     elif args.command == "process":
         process_command(args.api, args.batch_size)
-    elif args.command == "ui":
-        ui_command(args.port)
     elif args.command == "explore":
         await explore_command(args.url, args.depth)
     elif args.command == "generate-configs":
         generate_configs_command()
+    elif args.command == "cleanup":
+        await cleanup_command(args.api, args.dry_run)
     else:
         print("Please specify a command. Use --help for more information.")
 

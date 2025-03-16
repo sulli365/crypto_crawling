@@ -13,7 +13,14 @@ The project is currently in the early development phase, with a focus on establi
 
 ### Completed
 
-1. **Basic Infrastructure Setup**:
+1. **Duplicate Prevention and Cleanup**:
+   - Added unique constraint on url and chunk_number
+   - Implemented duplicate detection during insertion
+   - Created database cleanup functions for existing duplicates
+   - Added batch processing with progress tracking
+   - Improved browser cleanup with retry logic
+
+2. **Basic Infrastructure Setup**:
    - Project structure and dependencies established
    - Core modules implemented (URL extraction, crawling, processing, storage)
    - Error logging system implemented
@@ -96,7 +103,12 @@ The project is currently in the early development phase, with a focus on establi
 
 ## Current Challenges
 
-1. **Rate Limiting Variability**:
+1. **Database Functions Setup**:
+   - Need to execute SQL functions for duplicate detection
+   - Supabase REST API limitations for DDL statements
+   - Environment variable loading in scripts
+
+2. **Rate Limiting Variability**:
    - Different API documentation sites have different rate limiting policies
    - Need to fine-tune delay parameters for each API
    - Implementing adaptive rate limiting based on response headers

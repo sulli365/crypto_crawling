@@ -143,9 +143,23 @@ async def process_chunk(chunk: str, chunk_number: int, url: str, api_name: str) 
         embedding=embedding
     )
 
-async def insert_chunk(chunk: ProcessedChunk):
-    """Insert a processed chunk into Supabase."""
+async def check_chunk_exists(url: str, chunk_number: int) -> bool:
+    """Check if a chunk already exists in the database."""
     try:
+        result = supabase.table("crypto_api_site_pages").select("id").eq("url", url).eq("chunk_number", chunk_number).execute()
+        return len(result.data) > 0
+    except Exception as e:
+        logger.error(f"Error checking chunk existence: {e}")
+        return False
+
+async def insert_chunk(chunk: ProcessedChunk):
+    """Insert a processed chunk into Supabase if it doesn't already exist."""
+    try:
+        # Check if chunk already exists
+        if await check_chunk_exists(chunk.url, chunk.chunk_number):
+            print(f"Chunk {chunk.chunk_number} for {chunk.url} already exists - skipping")
+            return None
+            
         data = {
             "url": chunk.url,
             "chunk_number": chunk.chunk_number,
@@ -156,7 +170,11 @@ async def insert_chunk(chunk: ProcessedChunk):
             "embedding": chunk.embedding
         }
         
-        result = supabase.table("crypto_api_site_pages").insert(data).execute()
+        # Use upsert to handle race conditions
+        result = supabase.table("crypto_api_site_pages").upsert(
+            data,
+            on_conflict="url,chunk_number"  # Assuming these columns have a unique constraint
+        ).execute()
         
         print(f"Inserted chunk {chunk.chunk_number} for {chunk.url}")
         return result
@@ -231,8 +249,75 @@ async def crawl_with_rate_limit(
                 
     return None
 
+BATCH_SIZE = 50  # Process 50 URLs at a time
+
+async def save_progress(api_name: str, completed_urls: List[str]):
+    """Save crawling progress to a file."""
+    progress_dir = "progress"
+    os.makedirs(progress_dir, exist_ok=True)
+    progress_file = os.path.join(progress_dir, f"{api_name}_progress.json")
+    
+    # Save with timestamp and additional metadata
+    data = {
+        'completed_urls': completed_urls,
+        'last_updated': datetime.now(timezone.utc).isoformat(),
+        'total_completed': len(completed_urls)
+    }
+    
+    with open(progress_file, 'w') as f:
+        json.dump(data, f, indent=2)
+
+async def load_progress(api_name: str) -> List[str]:
+    """Load previously saved progress."""
+    progress_dir = "progress"
+    progress_file = os.path.join(progress_dir, f"{api_name}_progress.json")
+    
+    if os.path.exists(progress_file):
+        try:
+            with open(progress_file, 'r') as f:
+                data = json.load(f)
+                return data.get('completed_urls', [])
+        except json.JSONDecodeError as e:
+            logger.error(f"Error loading progress file for {api_name}: {e}")
+            # Backup corrupted file and return empty list
+            backup_file = f"{progress_file}.bak"
+            os.rename(progress_file, backup_file)
+            logger.info(f"Backed up corrupted progress file to {backup_file}")
+            return []
+    return []
+
+async def cleanup_browser(crawler: AsyncWebCrawler):
+    """Cleanup browser resources with retry logic."""
+    max_retries = 3
+    retry_delay = 1
+    
+    for attempt in range(max_retries):
+        try:
+            await asyncio.wait_for(crawler.close(), timeout=10)
+            return
+        except (asyncio.TimeoutError, Exception) as e:
+            if attempt == max_retries - 1:
+                logger.error(f"Failed to close browser after {max_retries} attempts: {e}")
+                # Force cleanup as last resort
+                try:
+                    import psutil
+                    for proc in psutil.process_iter(['pid', 'name']):
+                        if 'chrome' in proc.info['name'].lower():
+                            psutil.Process(proc.info['pid']).terminate()
+                except Exception as e:
+                    logger.error(f"Force cleanup failed: {e}")
+            else:
+                await asyncio.sleep(retry_delay)
+                retry_delay *= 2
+
 async def crawl_parallel(urls: List[str], api_config: CryptoApiConfig, max_concurrent: int = 5):
-    """Crawl multiple URLs in parallel with a concurrency limit."""
+    """Crawl multiple URLs in parallel with a concurrency limit and batch processing."""
+    # Load previous progress
+    completed_urls = await load_progress(api_config.name)
+    remaining_urls = [url for url in urls if url not in completed_urls]
+    
+    print(f"Resuming crawl for {api_config.name}: {len(completed_urls)} completed, {len(remaining_urls)} remaining")
+    
     browser_config = BrowserConfig(
         headless=True,
         verbose=False,
@@ -240,39 +325,56 @@ async def crawl_parallel(urls: List[str], api_config: CryptoApiConfig, max_concu
     )
     crawl_config = CrawlerRunConfig(cache_mode=CacheMode.BYPASS)
 
-    # Create the crawler instance
-    crawler = AsyncWebCrawler(config=browser_config)
-    await crawler.start()
+    for i in range(0, len(remaining_urls), BATCH_SIZE):
+        batch_urls = remaining_urls[i:i + BATCH_SIZE]
+        print(f"\nProcessing batch {i//BATCH_SIZE + 1} ({len(batch_urls)} URLs)")
+        
+        # Create new crawler instance for each batch
+        crawler = AsyncWebCrawler(config=browser_config)
+        await crawler.start()
 
-    try:
-        # Create a semaphore to limit concurrency
-        semaphore = asyncio.Semaphore(max_concurrent)
-        
-        async def process_url(url: str):
-            async with semaphore:
-                result = await crawl_with_rate_limit(crawler, url, crawl_config, api_config)
-                
-                if result and result.success:
-                    print(f"Successfully crawled: {url}")
-                    await process_and_store_document(
-                        url, 
-                        result.markdown_v2.raw_markdown, 
-                        api_config.name
-                    )
-                elif result:
-                    logger.log_general_error(
-                        api_config.name, 
-                        url, 
-                        f"Crawl failed: {result.error_message}"
-                    )
-                    print(f"Failed: {url} - Error: {result.error_message}")
-                else:
-                    print(f"Failed after retries: {url}")
-        
-        # Process all URLs in parallel with limited concurrency
-        await asyncio.gather(*[process_url(url) for url in urls])
-    finally:
-        await crawler.close()
+        try:
+            # Create a semaphore to limit concurrency
+            semaphore = asyncio.Semaphore(max_concurrent)
+            
+            async def process_url(url: str):
+                async with semaphore:
+                    try:
+                        result = await crawl_with_rate_limit(crawler, url, crawl_config, api_config)
+                        
+                        if result and result.success:
+                            print(f"Successfully crawled: {url}")
+                            await process_and_store_document(
+                                url, 
+                                result.markdown_v2.raw_markdown, 
+                                api_config.name
+                            )
+                            completed_urls.append(url)
+                            await save_progress(api_config.name, completed_urls)
+                        elif result:
+                            logger.log_general_error(
+                                api_config.name, 
+                                url, 
+                                f"Crawl failed: {result.error_message}"
+                            )
+                            print(f"Failed: {url} - Error: {result.error_message}")
+                        else:
+                            print(f"Failed after retries: {url}")
+                    except Exception as e:
+                        logger.log_general_error(api_config.name, url, f"Unexpected error: {str(e)}")
+                        print(f"Error processing {url}: {str(e)}")
+            
+            # Process batch URLs in parallel with limited concurrency
+            await asyncio.gather(*[process_url(url) for url in batch_urls])
+            
+        except Exception as e:
+            logger.error(f"Batch processing error: {str(e)}")
+        finally:
+            # Cleanup browser after each batch
+            await cleanup_browser(crawler)
+            
+        # Short pause between batches
+        await asyncio.sleep(2)
 
 async def process_api(api_config: CryptoApiConfig):
     """Process a single API's documentation."""

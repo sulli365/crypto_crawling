@@ -29,6 +29,10 @@
    - ✅ Vector similarity search function
    - ✅ Metadata filtering
    - ✅ Row-level security
+   - ✅ Duplicate detection and prevention
+   - ✅ Database cleanup functions
+   - ✅ Unique constraints on url and chunk_number
+   - 🔄 SQL function deployment
 
 5. **Configuration Management**
    - ✅ Flexible configuration system
@@ -214,7 +218,12 @@ The project is currently in the **early development phase**, with focus on:
 
 ### Known Issues
 
-1. **Memory Usage**
+1. **Database Function Deployment**
+   - SQL functions for duplicate detection need to be deployed
+   - Supabase REST API limitations for DDL statements
+   - Environment variable handling in setup scripts
+
+2. **Memory Usage**
    - Parallel crawling can consume significant memory
    - Need to optimize browser instance management
    - Batch size may need adjustment
@@ -242,7 +251,12 @@ The project is currently in the **early development phase**, with focus on:
 
 ## Next Priorities
 
-1. **Fix RAG agent tool registration issues**
+1. **Complete Database Function Deployment**
+   - Deploy SQL functions for duplicate detection
+   - Test cleanup functionality
+   - Verify unique constraints
+
+2. **Fix RAG agent tool registration issues**
    - Investigate pydantic-ai documentation for correct tool access methods
    - Install package in development mode (`pip install -e .`)
    - Create minimal example to verify basic functionality

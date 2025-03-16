@@ -1,0 +1,4 @@
+[console_scripts]
+crypto-crawl = crypto_crawler.crawling.crawler:main
+crypto-crawler = main:main
+crypto-ui = crypto_crawler.ui.streamlit_app:main
