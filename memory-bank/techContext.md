@@ -11,6 +11,7 @@ The Crypto API Documentation Crawler is built on a modern technology stack desig
 3. **OpenAI API**: Used for generating embeddings and powering the RAG agent.
 4. **Supabase**: Vector database for storing and retrieving documentation chunks.
 5. **Streamlit**: Frontend framework for the user interface.
+6. **Pydantic-AI**: Framework for building tool-based AI agents.
 
 ### Key Libraries and Dependencies
 
@@ -19,6 +20,8 @@ The Crypto API Documentation Crawler is built on a modern technology stack desig
    - `BeautifulSoup4`: HTML parsing and manipulation
    - `Playwright`: Browser automation for JavaScript-heavy sites
    - `aiohttp`: Asynchronous HTTP requests
+   - `requests`: Synchronous HTTP requests for simpler operations
+   - `psutil`: Process and system utilities for resource management
 
 2. **Natural Language Processing**
    - `OpenAI API`: Embeddings and LLM capabilities
@@ -39,6 +42,9 @@ The Crypto API Documentation Crawler is built on a modern technology stack desig
    - `dotenv`: Environment variable management
    - `logfire`: Structured logging
    - `dataclasses`: Structured data modeling
+   - `argparse`: Command-line argument parsing
+   - `json`: JSON data handling
+   - `xml.etree`: XML parsing for sitemaps
 
 ## Development Environment
 
@@ -47,6 +53,7 @@ The Crypto API Documentation Crawler is built on a modern technology stack desig
 1. **Python Environment**
    - Python 3.11+ with virtual environment
    - Dependencies installed via `pip install -r requirements.txt`
+   - Package installation in development mode: `pip install -e .`
 
 2. **Environment Variables**
    - `.env` file with the following variables:
@@ -59,13 +66,30 @@ The Crypto API Documentation Crawler is built on a modern technology stack desig
 
 3. **Database Setup**
    - Supabase project with pgvector extension enabled
-   - Tables created using the SQL in `site_pages.sql`
+   - Tables created using the SQL in `config/site_pages.sql`
+   - Database functions deployed from `config/db_functions.sql`
+   - API source functions from `config/get_distinct_api_sources.sql`
+
+### Project Structure
+
+1. **Package Organization**
+   - src-layout with `crypto_crawler` package
+   - Modular organization with subpackages for different components
+   - Entry points defined in `setup.py`
+   - Main CLI interface in `main.py`
+
+2. **Configuration Management**
+   - API configurations in JSON format
+   - SQL files in `config/` directory
+   - Documentation in `docs/` directory
+   - Error logs in `error_logs/` directory
 
 ### Deployment Options
 
 1. **Local Deployment**
-   - Run the Streamlit UI locally with `streamlit run streamlit_ui.py`
-   - Crawling and processing run as separate processes
+   - Run the Streamlit UI locally with `streamlit run src/crypto_crawler/ui/streamlit_app.py`
+   - Crawling and processing run via CLI: `python main.py crawl`
+   - Database cleanup via CLI: `python main.py cleanup`
 
 2. **Docker Deployment**
    - Docker and docker-compose configuration available
@@ -92,6 +116,7 @@ The Crypto API Documentation Crawler is built on a modern technology stack desig
      - Vector storage and retrieval
      - Metadata storage
      - Row-level security
+     - Database functions for efficient queries
    - Performance depends on chosen Supabase tier
 
 ### Third-Party Documentation Sites
@@ -102,6 +127,7 @@ The system interacts with 20+ cryptocurrency API documentation sites, each with 
 - Authentication requirements
 - JavaScript dependencies
 - Robots.txt restrictions
+- Sitemap availability
 
 ## Technical Constraints
 
@@ -109,26 +135,31 @@ The system interacts with 20+ cryptocurrency API documentation sites, each with 
    - Most API documentation sites implement rate limiting
    - Crawling must respect these limits to avoid being blocked
    - Exponential backoff and retry mechanisms are essential
+   - Different APIs have different rate limit policies
 
 2. **JavaScript-Heavy Sites**
    - Many modern documentation sites rely heavily on JavaScript
    - Full browser rendering (via Playwright) is required
    - Increases resource usage compared to simple HTTP requests
+   - Single-page applications require special handling
 
 3. **Memory Usage**
    - Browser automation is memory-intensive
    - Parallel crawling must be carefully managed to avoid OOM errors
    - Batch processing is used to control memory consumption
+   - Browser cleanup is critical for long-running processes
 
 4. **Token Limits**
    - OpenAI models have context window limits
    - Chunking strategy must balance context preservation with token limits
    - Embedding generation has its own rate limits and quotas
+   - Title and summary generation requires efficient prompt design
 
 5. **Database Performance**
    - Vector similarity search can be computationally expensive
    - Indexing is crucial for acceptable query performance
    - Connection pooling helps manage concurrent database access
+   - Metadata filtering efficiency impacts query performance
 
 ## Security Considerations
 
@@ -136,16 +167,25 @@ The system interacts with 20+ cryptocurrency API documentation sites, each with 
    - OpenAI and Supabase keys must be securely stored
    - Environment variables used for local development
    - Secrets management for production deployment
+   - No hardcoded credentials in source code
 
 2. **Data Privacy**
    - Only publicly available documentation is crawled
    - No user data is collected beyond query history
    - Row-level security in Supabase controls access
+   - Clear attribution of information sources
 
 3. **Rate Limit Compliance**
    - System designed to respect website rate limits
    - Configurable delays between requests
    - User-agent identification follows best practices
+   - Exponential backoff for rate limit errors
+
+4. **Error Handling**
+   - Categorized error logging for security-related issues
+   - No sensitive information in error logs
+   - Proper exception handling to prevent information leakage
+   - Secure error reporting
 
 ## Performance Considerations
 
@@ -153,18 +193,23 @@ The system interacts with 20+ cryptocurrency API documentation sites, each with 
    - Parallel processing with configurable concurrency
    - Session reuse to minimize browser startup overhead
    - Caching to avoid redundant requests
+   - Batch processing with progress tracking
+   - Resumable crawls for reliability
 
 2. **Database Optimization**
    - Vector indexing for faster similarity search
    - Metadata indexing for efficient filtering
    - Connection pooling for better resource utilization
+   - Duplicate prevention and cleanup
 
 3. **Memory Management**
    - Batch processing to control memory usage
    - Resource monitoring during crawling
    - Garbage collection optimization
+   - Browser cleanup with retry logic
 
 4. **Response Time**
    - Vector search optimization for sub-second query response
    - Response streaming for better user experience
    - Caching frequently accessed documentation
+   - Efficient metadata filtering

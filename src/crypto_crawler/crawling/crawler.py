@@ -4,7 +4,12 @@ import json
 import asyncio
 import argparse
 import requests
-from typing import List, Dict, Any, Optional
+import psutil
+import sys
+import glob
+import shutil
+import gc
+from typing import List, Dict, Any, Optional, Tuple
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from urllib.parse import urlparse
@@ -187,24 +192,67 @@ async def insert_chunk(chunk: ProcessedChunk):
             print(f"Response content: {e.response.content}")
         return None
 
+def sanitize_text(text: str) -> str:
+    """
+    Sanitize text to handle encoding issues.
+    Replace problematic Unicode characters with their ASCII equivalents or remove them.
+    """
+    # Common problematic character replacements
+    replacements = {
+        '\u2192': '->',  # → (right arrow)
+        '\u2190': '<-',  # ← (left arrow)
+        '\u2022': '*',   # • (bullet)
+        '\u2018': "'",   # ' (left single quote)
+        '\u2019': "'",   # ' (right single quote)
+        '\u201c': '"',   # " (left double quote)
+        '\u201d': '"',   # " (right double quote)
+        '\u2013': '-',   # – (en dash)
+        '\u2014': '--',  # — (em dash)
+        '\u00a0': ' ',   # non-breaking space
+    }
+    
+    # Replace known problematic characters
+    for char, replacement in replacements.items():
+        text = text.replace(char, replacement)
+    
+    # For any other characters that might cause issues, replace with '?'
+    # This is a fallback to ensure we don't crash on unknown characters
+    encoded_text = ''
+    for char in text:
+        try:
+            # Test if character can be encoded in the system's default encoding
+            char.encode(sys.stdout.encoding)
+            encoded_text += char
+        except UnicodeEncodeError:
+            encoded_text += '?'
+    
+    return encoded_text
+
 async def process_and_store_document(url: str, markdown: str, api_name: str):
     """Process a document and store its chunks in parallel."""
-    # Split into chunks
-    chunks = chunk_text(markdown)
-    
-    # Process chunks in parallel
-    tasks = [
-        process_chunk(chunk, i, url, api_name) 
-        for i, chunk in enumerate(chunks)
-    ]
-    processed_chunks = await asyncio.gather(*tasks)
-    
-    # Store chunks in parallel
-    insert_tasks = [
-        insert_chunk(chunk) 
-        for chunk in processed_chunks
-    ]
-    await asyncio.gather(*insert_tasks)
+    try:
+        # Sanitize markdown to handle encoding issues
+        sanitized_markdown = sanitize_text(markdown)
+        
+        # Split into chunks
+        chunks = chunk_text(sanitized_markdown)
+        
+        # Process chunks in parallel
+        tasks = [
+            process_chunk(chunk, i, url, api_name) 
+            for i, chunk in enumerate(chunks)
+        ]
+        processed_chunks = await asyncio.gather(*tasks)
+        
+        # Store chunks in parallel
+        insert_tasks = [
+            insert_chunk(chunk) 
+            for chunk in processed_chunks
+        ]
+        await asyncio.gather(*insert_tasks)
+    except Exception as e:
+        logger.log_general_error(api_name, url, f"Error processing document: {str(e)}")
+        print(f"Error processing {url}: {str(e)}")
 
 async def crawl_with_rate_limit(
     crawler: AsyncWebCrawler, 
@@ -249,7 +297,85 @@ async def crawl_with_rate_limit(
                 
     return None
 
-BATCH_SIZE = 50  # Process 50 URLs at a time
+# Memory management constants
+MEMORY_THRESHOLD = 0.6  # 60% system memory utilization
+SAFETY_BUFFER = 0.05    # 5% buffer below OS OOM killer
+MIN_BATCH_SIZE = 20     # Minimum batch size for efficiency
+MAX_BATCH_SIZE = 100    # Maximum batch size
+MIN_CONCURRENCY = 2     # Minimum concurrency
+MAX_CONCURRENCY = 8     # Maximum concurrency
+
+def get_memory_usage() -> Tuple[float, float]:
+    """
+    Get current memory usage as a percentage and available memory in GB.
+    
+    Returns:
+        Tuple of (memory_percent, available_gb)
+    """
+    mem = psutil.virtual_memory()
+    memory_percent = mem.percent / 100.0
+    available_gb = mem.available / (1024 ** 3)
+    return memory_percent, available_gb
+
+def should_reduce_resources() -> bool:
+    """
+    Check if we should reduce resource usage based on memory threshold.
+    
+    Returns:
+        True if memory usage is above threshold, False otherwise
+    """
+    memory_percent, _ = get_memory_usage()
+    return memory_percent > (MEMORY_THRESHOLD - SAFETY_BUFFER)
+
+def get_dynamic_batch_size() -> int:
+    """
+    Calculate dynamic batch size based on available memory.
+    
+    Returns:
+        Batch size between MIN_BATCH_SIZE and MAX_BATCH_SIZE
+    """
+    memory_percent, available_gb = get_memory_usage()
+    
+    if memory_percent > MEMORY_THRESHOLD:
+        # If memory usage is high, use minimum batch size
+        return MIN_BATCH_SIZE
+    
+    # Scale batch size based on available memory
+    # More available memory = larger batch size
+    if available_gb > 8:
+        return MAX_BATCH_SIZE
+    elif available_gb > 4:
+        return int(MIN_BATCH_SIZE + (MAX_BATCH_SIZE - MIN_BATCH_SIZE) * 0.75)
+    elif available_gb > 2:
+        return int(MIN_BATCH_SIZE + (MAX_BATCH_SIZE - MIN_BATCH_SIZE) * 0.5)
+    else:
+        return MIN_BATCH_SIZE
+
+def get_dynamic_concurrency(default_concurrency: int = 5) -> int:
+    """
+    Calculate dynamic concurrency based on available memory.
+    
+    Args:
+        default_concurrency: Default concurrency level
+        
+    Returns:
+        Concurrency level between MIN_CONCURRENCY and MAX_CONCURRENCY
+    """
+    memory_percent, available_gb = get_memory_usage()
+    
+    if memory_percent > MEMORY_THRESHOLD:
+        # If memory usage is high, use minimum concurrency
+        return MIN_CONCURRENCY
+    
+    # Scale concurrency based on available memory
+    if available_gb > 8:
+        return MAX_CONCURRENCY
+    elif available_gb > 4:
+        return min(default_concurrency, 6)
+    elif available_gb > 2:
+        return min(default_concurrency, 4)
+    else:
+        return MIN_CONCURRENCY
 
 async def save_progress(api_name: str, completed_urls: List[str]):
     """Save crawling progress to a file."""
@@ -287,31 +413,50 @@ async def load_progress(api_name: str) -> List[str]:
     return []
 
 async def cleanup_browser(crawler: AsyncWebCrawler):
-    """Cleanup browser resources with retry logic."""
-    max_retries = 3
-    retry_delay = 1
-    
-    for attempt in range(max_retries):
+    """Improved resource cleanup with multiple strategies."""
+    try:
+        # First try proper shutdown with timeout
         try:
             await asyncio.wait_for(crawler.close(), timeout=10)
-            return
         except (asyncio.TimeoutError, Exception) as e:
-            if attempt == max_retries - 1:
-                logger.error(f"Failed to close browser after {max_retries} attempts: {e}")
-                # Force cleanup as last resort
-                try:
-                    import psutil
-                    for proc in psutil.process_iter(['pid', 'name']):
-                        if 'chrome' in proc.info['name'].lower():
-                            psutil.Process(proc.info['pid']).terminate()
-                except Exception as e:
-                    logger.error(f"Force cleanup failed: {e}")
-            else:
-                await asyncio.sleep(retry_delay)
-                retry_delay *= 2
+            logger.error(f"Normal browser shutdown failed: {str(e)}")
+        
+        # Then kill any remaining Chrome processes
+        for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+            try:
+                if proc.info['cmdline'] and any('chrome' in part.lower() for part in proc.info['cmdline']):
+                    try:
+                        proc.terminate()
+                        logger.info(f"Terminated Chrome process {proc.info['pid']}")
+                    except psutil.NoSuchProcess:
+                        pass
+            except (psutil.AccessDenied, psutil.ZombieProcess, Exception) as e:
+                logger.error(f"Error checking process {proc.pid}: {str(e)}")
+                
+        # Clear Chromium temp directories
+        temp_dirs = [
+            os.path.join(os.getenv('TEMP', os.path.join(os.path.expanduser('~'), 'AppData', 'Local', 'Temp')), 'puppeteer*'),
+            os.path.expanduser('~/.cache/puppeteer')
+        ]
+        for pattern in temp_dirs:
+            try:
+                for path in glob.glob(pattern):
+                    try:
+                        shutil.rmtree(path, ignore_errors=True)
+                        logger.info(f"Cleaned up temp directory: {path}")
+                    except Exception as e:
+                        logger.error(f"Error cleaning temp directory {path}: {str(e)}")
+            except Exception as e:
+                logger.error(f"Error processing temp pattern {pattern}: {str(e)}")
+                
+        # Force garbage collection
+        gc.collect()
+                
+    except Exception as e:
+        logger.error(f"Cleanup error: {str(e)}")
 
 async def crawl_parallel(urls: List[str], api_config: CryptoApiConfig, max_concurrent: int = 5):
-    """Crawl multiple URLs in parallel with a concurrency limit and batch processing."""
+    """Crawl multiple URLs in parallel with dynamic batch sizing and concurrency based on memory usage."""
     # Load previous progress
     completed_urls = await load_progress(api_config.name)
     remaining_urls = [url for url in urls if url not in completed_urls]
@@ -321,21 +466,49 @@ async def crawl_parallel(urls: List[str], api_config: CryptoApiConfig, max_concu
     browser_config = BrowserConfig(
         headless=True,
         verbose=False,
-        extra_args=["--disable-gpu", "--disable-dev-shm-usage", "--no-sandbox"],
+        extra_args=[
+            "--disable-gpu",
+            "--disable-dev-shm-usage",
+            "--no-sandbox",
+            "--single-process",  # Single renderer process
+            "--js-flags=--max-old-space-size=4096",  # 4GB JS heap limit
+            "--no-zygote",  # Disable zygote process
+            "--no-first-run", 
+            "--disable-setuid-sandbox",
+            "--disable-accelerated-2d-canvas",
+            "--disable-site-isolation-trials"
+        ],
     )
     crawl_config = CrawlerRunConfig(cache_mode=CacheMode.BYPASS)
 
-    for i in range(0, len(remaining_urls), BATCH_SIZE):
-        batch_urls = remaining_urls[i:i + BATCH_SIZE]
-        print(f"\nProcessing batch {i//BATCH_SIZE + 1} ({len(batch_urls)} URLs)")
+    # Start with a reasonable batch size
+    current_batch_size = get_dynamic_batch_size()
+    
+    # Process URLs in dynamically sized batches
+    i = 0
+    while i < len(remaining_urls):
+        # Check memory usage and adjust batch size
+        memory_percent, available_gb = get_memory_usage()
+        print(f"Memory usage: {memory_percent*100:.1f}%, Available: {available_gb:.1f}GB")
+        
+        # Adjust batch size based on memory usage
+        current_batch_size = get_dynamic_batch_size()
+        
+        # Get current batch of URLs
+        batch_urls = remaining_urls[i:i + current_batch_size]
+        print(f"\nProcessing batch {i//current_batch_size + 1} ({len(batch_urls)} URLs, Batch size: {current_batch_size})")
         
         # Create new crawler instance for each batch
         crawler = AsyncWebCrawler(config=browser_config)
         await crawler.start()
 
         try:
+            # Determine concurrency based on memory usage
+            current_concurrency = get_dynamic_concurrency(max_concurrent)
+            print(f"Using concurrency level: {current_concurrency}")
+            
             # Create a semaphore to limit concurrency
-            semaphore = asyncio.Semaphore(max_concurrent)
+            semaphore = asyncio.Semaphore(current_concurrency)
             
             async def process_url(url: str):
                 async with semaphore:
@@ -363,18 +536,46 @@ async def crawl_parallel(urls: List[str], api_config: CryptoApiConfig, max_concu
                     except Exception as e:
                         logger.log_general_error(api_config.name, url, f"Unexpected error: {str(e)}")
                         print(f"Error processing {url}: {str(e)}")
+                    finally:
+                        # Force cleanup after each URL to prevent memory leaks
+                        try:
+                            # Clear browser cache and perform garbage collection
+                            if hasattr(crawler, '_page') and crawler._page:
+                                await crawler._page.evaluate("""() => {
+                                    window.performance.clearResourceTimings();
+                                    if (window.gc) window.gc();
+                                }""")
+                            
+                            # Force Python garbage collection
+                            gc.collect()
+                        except Exception as e:
+                            logger.error(f"Error during mid-URL cleanup: {str(e)}")
             
             # Process batch URLs in parallel with limited concurrency
             await asyncio.gather(*[process_url(url) for url in batch_urls])
             
+            # Increment index for next batch
+            i += len(batch_urls)
+            
         except Exception as e:
             logger.error(f"Batch processing error: {str(e)}")
+            # On error, still move forward to next batch to avoid getting stuck
+            i += len(batch_urls)
         finally:
             # Cleanup browser after each batch
             await cleanup_browser(crawler)
             
+            # Force garbage collection after each batch
+            gc.collect()
+            
         # Short pause between batches
         await asyncio.sleep(2)
+        
+        # Add additional memory cleanup between batches
+        if should_reduce_resources():
+            print("High memory usage detected, performing additional cleanup...")
+            gc.collect()
+            await asyncio.sleep(5)  # Allow OS to reclaim memory
 
 async def process_api(api_config: CryptoApiConfig):
     """Process a single API's documentation."""

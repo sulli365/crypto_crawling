@@ -11,7 +11,7 @@ class ErrorLogger:
         if log_dir is None:
             # Get the project root directory (4 levels up from this file)
             current_dir = os.path.dirname(os.path.abspath(__file__))
-            project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(current_dir))))
+            project_root = os.path.dirname(os.path.dirname(os.path.dirname(current_dir)))
             log_dir = os.path.join(project_root, "error_logs")
             
         self.log_dir = log_dir

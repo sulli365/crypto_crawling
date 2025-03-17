@@ -7,43 +7,40 @@ The project is currently in the early development phase, with a focus on establi
 1. **Extending API Coverage**: Building on the successful implementation with CoinGecko API to cover all 20+ cryptocurrency APIs.
 2. **Refining the RAG Agent**: Updating the agent to properly query and retrieve information from the crypto API documentation database.
 3. **Enhancing the User Interface**: Improving the Streamlit UI for a better user experience.
-4. **Project Structure Refinement**: Fine-tuning the Python package structure and ensuring all components work together seamlessly.
+4. **Database Function Deployment**: Deploying SQL functions for duplicate detection and vector search.
 
 ## Recent Developments
 
 ### Completed
 
-1. **Duplicate Prevention and Cleanup**:
-   - Added unique constraint on url and chunk_number
-   - Implemented duplicate detection during insertion
-   - Created database cleanup functions for existing duplicates
-   - Added batch processing with progress tracking
-   - Improved browser cleanup with retry logic
-
-2. **Basic Infrastructure Setup**:
-   - Project structure and dependencies established
-   - Core modules implemented (URL extraction, crawling, processing, storage)
-   - Error logging system implemented
-
-2. **CoinGecko API Integration**:
-   - Successfully crawled CoinGecko API documentation
-   - Implemented chunking and processing pipeline
-   - Stored documentation in Supabase vector database
-
-3. **Configuration System**:
-   - Created a flexible configuration system for managing API settings
-   - Implemented dynamic configuration generation from markdown file
-   - Added exploration capabilities for analyzing API documentation sites
-
-4. **Project Reorganization**:
+1. **Project Structure Refinement**:
    - Implemented proper Python package structure with src layout
    - Created modular organization with api, crawling, utils, ui, and scripts subpackages
    - Added setup.py and pyproject.toml for package installation
    - Updated imports to reflect the new structure
    - Moved configuration files to the config/ directory
    - Moved documentation to the docs/ directory
-   - Created a main entry point script at the project root
-   - Updated README with comprehensive installation and usage instructions
+   - Created a main entry point script at the project root with comprehensive CLI
+
+2. **Duplicate Prevention and Cleanup**:
+   - Added unique constraint on url and chunk_number
+   - Implemented duplicate detection during insertion
+   - Created database cleanup functions for existing duplicates
+   - Added batch processing with progress tracking
+   - Improved browser cleanup with retry logic
+
+3. **Crawling Improvements**:
+   - Implemented progress tracking and resumable crawls
+   - Added batch processing to control memory usage
+   - Enhanced error handling with categorized logging
+   - Improved browser cleanup with retry logic
+   - Added exponential backoff for rate limit errors
+
+4. **RAG Agent Enhancement**:
+   - Implemented tool-based architecture using pydantic-ai
+   - Created specialized tools for API documentation retrieval
+   - Added API comparison capabilities
+   - Implemented documentation listing functionality
 
 ### In Progress
 
@@ -51,17 +48,19 @@ The project is currently in the early development phase, with a focus on establi
    - Testing crawling with additional cryptocurrency APIs
    - Refining rate limiting and retry mechanisms
    - Optimizing parallel crawling for better performance
+   - Implementing API-specific chunking parameters
 
-2. **RAG Agent Development**:
-   - Updating the agent to work with the crypto API documentation
-   - Implementing tools for retrieving relevant documentation
-   - Debugging tool registration issues with pydantic-ai
-   - Testing query understanding and response generation
+2. **Database Function Deployment**:
+   - Deploying SQL functions for duplicate detection
+   - Setting up vector search functions
+   - Implementing efficient metadata filtering
+   - Testing database performance with larger datasets
 
-3. **Command-line Interface Enhancement**:
-   - Implementing additional CLI commands and options
-   - Adding better error handling and user feedback
-   - Creating comprehensive help documentation
+3. **Streamlit UI Enhancement**:
+   - Improving response formatting
+   - Adding API selection dropdown
+   - Implementing source attribution
+   - Enhancing message history management
 
 ## Key Decisions
 
@@ -91,15 +90,10 @@ The project is currently in the early development phase, with a focus on establi
    - Implementation: Organized code into logical modules (api, crawling, utils, ui, scripts)
    - Added proper entry points for command-line scripts
 
-6. **Configuration Management**:
-   - Decision: Move configuration files to a dedicated config/ directory
-   - Rationale: Separates configuration from code for better maintainability
-   - Implementation: Updated path handling in code to reference the new locations
-
-7. **Main Entry Point**:
-   - Decision: Create a unified main.py script with command-line interface
-   - Rationale: Provides a single entry point for all functionality
-   - Implementation: Used argparse to create a comprehensive CLI with subcommands
+6. **Agent Architecture**:
+   - Decision: Use pydantic-ai for the RAG agent implementation
+   - Rationale: Provides a structured, tool-based approach for agent development
+   - Implementation: Created specialized tools for documentation retrieval and API comparison
 
 ## Current Challenges
 
@@ -107,62 +101,59 @@ The project is currently in the early development phase, with a focus on establi
    - Need to execute SQL functions for duplicate detection
    - Supabase REST API limitations for DDL statements
    - Environment variable loading in scripts
+   - Testing database functions with larger datasets
 
 2. **Rate Limiting Variability**:
    - Different API documentation sites have different rate limiting policies
    - Need to fine-tune delay parameters for each API
    - Implementing adaptive rate limiting based on response headers
+   - Handling temporary IP blocks from aggressive crawling
 
-2. **JavaScript-Heavy Sites**:
+3. **JavaScript-Heavy Sites**:
    - Some documentation sites rely heavily on JavaScript for content rendering
    - Requires full browser automation, increasing resource usage
    - Exploring optimizations to reduce memory consumption
+   - Handling single-page applications with dynamic content loading
 
-3. **Content Structure Diversity**:
+4. **Content Structure Diversity**:
    - API documentation varies widely in structure and organization
    - Chunking strategy may need refinement for different documentation styles
    - Considering API-specific chunking parameters
+   - Handling complex nested documentation structures
 
-4. **Database Performance**:
-   - Vector similarity search can be computationally expensive
-   - Need to optimize indexing and query parameters
-   - Monitoring query performance as the database grows
-
-5. **RAG Agent Tool Registration**:
-   - Tools defined with `@crypto_api_expert.tool` decorator aren't being properly registered
-   - Agent doesn't expose tools as direct attributes (list_available_apis, retrieve_relevant_documentation, etc.)
-   - Need to investigate pydantic-ai documentation for correct tool access methods
-   - May need to install package in development mode for proper module discovery
+5. **Memory Management**:
+   - Browser automation is memory-intensive
+   - Need to optimize batch size and concurrency settings
+   - Implementing better resource cleanup
+   - Monitoring memory usage during long crawling sessions
 
 ## Next Steps
 
 ### Immediate (Next 1-2 Weeks)
 
-1. **Complete Multi-API Crawling**:
+1. **Deploy Database Functions**:
+   - Execute SQL functions for duplicate detection
+   - Set up vector search functions
+   - Test with larger datasets
+   - Optimize query performance
+
+2. **Complete Multi-API Crawling**:
    - Test and refine crawling for all 20+ cryptocurrency APIs
    - Optimize crawling parameters for each API
    - Implement monitoring for crawling progress
-
-2. **Fix RAG Agent Tool Registration**:
-   - Investigate pydantic-ai documentation for correct tool access methods
-   - Install package in development mode (`pip install -e .`)
-   - Create minimal example to verify basic functionality
-   - Update agent implementation based on findings
+   - Fine-tune rate limiting for each API
 
 3. **Enhance RAG Agent**:
-   - Update the agent to work with the crypto API documentation
-   - Implement specialized tools for different query types
-   - Test with a variety of cryptocurrency-related queries
+   - Test all implemented tools with real queries
+   - Improve response formatting and source attribution
+   - Implement API comparison capabilities
+   - Add code example extraction
 
 4. **Improve User Interface**:
    - Enhance the Streamlit UI with better formatting
    - Add filtering options for specific APIs
    - Implement source attribution for responses
-
-5. **Implement Automated Tests**:
-   - Create unit tests for core components
-   - Implement integration tests for the full pipeline
-   - Set up CI/CD for automated testing
+   - Add visualization for API capabilities
 
 ### Medium-Term (Next 2-4 Weeks)
 
@@ -170,16 +161,19 @@ The project is currently in the early development phase, with a focus on establi
    - Implement a system for updating documentation without full recrawling
    - Track changes in API documentation over time
    - Optimize update frequency based on API update patterns
+   - Add versioning for documentation chunks
 
 2. **Advanced Query Capabilities**:
    - Add support for code generation based on API documentation
    - Implement comparison tools for different APIs
    - Develop specialized query templates for common use cases
+   - Add support for multi-step reasoning
 
 3. **Performance Optimization**:
    - Profile and optimize the entire pipeline
    - Implement caching for frequently accessed documentation
    - Refine vector search parameters for better relevance
+   - Optimize memory usage during crawling
 
 ### Long-Term (Beyond 4 Weeks)
 
@@ -187,13 +181,16 @@ The project is currently in the early development phase, with a focus on establi
    - Add support for crawling documentation behind authentication
    - Implement secure credential management
    - Test with APIs requiring authentication
+   - Handle session-based authentication
 
 2. **PDF Documentation**:
    - Add support for processing PDF documentation
    - Implement PDF-specific extraction and chunking strategies
    - Test with APIs that provide documentation in PDF format
+   - Handle complex PDF layouts and tables
 
 3. **API Categorization**:
    - Implement automatic categorization of API endpoints
    - Develop a taxonomy for cryptocurrency API capabilities
    - Enable filtering and searching by capability category
+   - Create visualization of API ecosystem

@@ -1,22 +1,46 @@
-# System Patterns
+# System Architecture Patterns
 
-## Architecture Overview
+## Module Structure
+```mermaid
+flowchart LR
+    Root[src/crypto_crawler] --> API[api/]
+    Root --> Crawling[crawling/]
+    Root --> UI[ui/]
+    Root --> Utils[utils/]
+    
+    API --> Config[config.py]
+    API --> Expert[expert.py]
+    
+    Crawling --> Crawler[crawler.py]
+    Crawling --> URLExtractor[url_extractor.py]
+    
+    UI --> Streamlit[streamlit_app.py]
+    
+    Utils --> ErrorLogger[error_logger.py]
+    Utils --> DBCleanup[db_cleanup.py]
+```
 
-The Crypto API Documentation Crawler follows a modular, pipeline-based architecture designed for flexibility, scalability, and maintainability. The system is organized into several distinct components that work together to crawl, process, store, and retrieve cryptocurrency API documentation.
-
+## Error Handling Pipeline
 ```mermaid
 flowchart TD
-    A[API Configuration] --> B[URL Discovery]
-    B --> C[Web Crawling]
-    C --> D[Content Processing]
-    D --> E[Vector Database]
-    E --> F[RAG Agent]
-    F --> G[User Interface]
-    
-    H[Error Logging] --> B
-    H --> C
-    H --> D
-    H --> E
+    Error[Error Occurred] --> Log[Log to error_logs/]
+    Log --> Analyze[Analyze Error Type]
+    Analyze -->|Recoverable| Retry[Retry Pipeline]
+    Analyze -->|Fatal| Alert[Alert User via UI]
+    Retry -->|Success| Continue[Continue Processing]
+    Retry -->|Failure| Escalate[Escalate to Manual Review]
+```
+
+## Data Flow
+```mermaid
+flowchart LR
+    APIs[(Crypto APIs)] --> Discover[URL Discovery]
+    Discover --> Crawl[Content Crawling]
+    Crawl --> Chunk[Semantic Chunking]
+    Chunk --> Embed[Vector Embedding]
+    Embed --> Store[Supabase Storage]
+    Store --> Retrieve[Retrieval for RAG]
+    Retrieve --> UI[Streamlit Interface]
 ```
 
 ## Project Structure
@@ -38,7 +62,8 @@ crypto_crawler/
 │       │   └── url_extractor.py
 │       ├── utils/
 │       │   ├── __init__.py
-│       │   └── error_logger.py
+│       │   ├── error_logger.py
+│       │   └── db_cleanup.py
 │       ├── ui/
 │       │   ├── __init__.py
 │       │   └── streamlit_app.py
@@ -46,19 +71,24 @@ crypto_crawler/
 │           ├── __init__.py
 │           ├── explore_api_url.py
 │           ├── generate_api_configs.py
-│           ├── run_test.py
+│           ├── test_rag_agent.py
 │           └── test_supabase_connection.py
 ├── config/
-│   ├── crypto_api_configs.json
-│   └── site_pages.sql
+│   ├── db_functions.sql
+│   ├── get_distinct_api_sources.sql
+│   ├── site_pages.sql
+│   └── README.md
 ├── docs/
 │   └── crypto-apis.md
 ├── examples/
-│   └── crawl4AI-examples/
 ├── error_logs/
 ├── memory-bank/
+├── old/
 ├── setup.py
-└── pyproject.toml
+├── pyproject.toml
+├── requirements.txt
+├── main.py
+└── README.md
 ```
 
 This structure provides several benefits:
@@ -97,6 +127,9 @@ The crawling system is designed for efficiency, reliability, and respect for API
 - **Retry Mechanism**: Exponential backoff strategy for handling rate limit errors.
 - **Session Reuse**: Browser sessions are reused to improve performance.
 - **Error Categorization**: Errors are categorized (rate limit, connection, parsing) for targeted handling.
+- **Batch Processing**: URLs are processed in batches to control memory usage and improve reliability.
+- **Progress Tracking**: Crawling progress is saved to enable resuming interrupted crawls.
+- **Browser Cleanup**: Improved browser cleanup with retry logic to prevent resource leaks.
 
 ### 4. Content Processing
 
@@ -107,6 +140,7 @@ Content processing transforms raw HTML into structured, searchable chunks:
 - **Title and Summary Extraction**: Each chunk is enhanced with an AI-generated title and summary.
 - **Embedding Generation**: Vector embeddings are created for semantic search capabilities.
 - **Metadata Enrichment**: Chunks are tagged with source information, timestamps, and other metadata.
+- **Duplicate Prevention**: Unique constraints and checks prevent duplicate content.
 
 ### 5. Vector Database
 
@@ -116,6 +150,8 @@ Supabase with pgvector extension provides the vector storage and retrieval capab
 - **Similarity Search**: Cosine similarity is used for semantic matching of queries to content.
 - **Metadata Filtering**: JSON metadata enables filtering by API provider, content type, etc.
 - **Row-Level Security**: Appropriate security policies ensure data protection.
+- **Database Functions**: SQL functions for efficient vector search and duplicate detection.
+- **Cleanup Utilities**: Tools for identifying and removing duplicate entries.
 
 ### 6. RAG Agent
 
@@ -125,6 +161,8 @@ The Retrieval-Augmented Generation agent provides an intelligent interface to th
 - **Contextual Retrieval**: Relevant documentation chunks are retrieved based on semantic similarity.
 - **Response Generation**: Coherent, informative responses are generated using retrieved context.
 - **Tool-Based Architecture**: The agent uses a tool-based approach for flexible functionality.
+- **API Comparison**: Tools for comparing similar endpoints across different APIs.
+- **Documentation Listing**: Tools for listing available APIs and documentation pages.
 
 ### 7. User Interface
 
@@ -175,6 +213,7 @@ The RAG component follows an agent-based architecture:
 - **Tool-Based Actions**: The agent has access to specific tools for different tasks
 - **Context Management**: Conversation context is maintained across interactions
 - **Declarative Behavior**: The agent's behavior is defined by its system prompt and available tools
+- **Pydantic-AI Framework**: Leverages the pydantic-ai framework for agent implementation
 
 ### 5. Module Pattern
 
@@ -192,6 +231,8 @@ The system implements a comprehensive error handling strategy:
 - **Structured Reporting**: Error logs include timestamps, URLs, and detailed error messages
 - **Markdown Formatting**: Error logs are stored in markdown format for readability
 - **Summary Statistics**: Error summaries provide an overview of system health
+- **Retry Mechanisms**: Exponential backoff for recoverable errors
+- **Resource Cleanup**: Improved browser cleanup with retry logic
 
 ## Scalability Considerations
 
@@ -201,3 +242,4 @@ The architecture is designed with scalability in mind:
 - **Memory Management**: Monitoring and optimization of memory usage during crawling
 - **Batch Processing**: URLs are processed in batches to control resource usage
 - **Incremental Updates**: The system supports adding new APIs without reprocessing existing ones
+- **Progress Tracking**: Crawling progress is saved to enable resuming interrupted crawls
