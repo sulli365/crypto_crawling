@@ -27,13 +27,14 @@ A curated list of the most reliable and comprehensive cryptocurrency APIs for de
 ## 3. CryptoCompare
 **Website:** https://min-api.cryptocompare.com/
 **Documentation:** https://developers.cryptocompare.com/
-**Pricing:** https://min-api.cryptocompare.com/pricing
-- Free cryptocurrency data APIs
-- High-quality historical & real-time trade data
-- Order book and volume data
-- REST & WebSocket APIs available
-- Aggregated data from multiple exchanges
-- Excellent documentation and support
+**Pricing:** https://developers.coindesk.com/pricing
+- Industry-standard cryptocurrency price data
+- Real-time and historical price information
+- Bitcoin Price Index (BPI) and other indices
+- Legacy price endpoints for backward compatibility
+- REST API with comprehensive documentation
+- Data from trusted cryptocurrency exchanges
+- Market insights and analytics
 
 ## 4. CoinAPI.io
 **Website:** https://www.coinapi.io/

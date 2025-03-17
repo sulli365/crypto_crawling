@@ -28,6 +28,8 @@ The Crypto API Documentation Crawler addresses these challenges by:
 
 5. **Comprehensive Coverage**: Including market data APIs, blockchain explorers, DEX aggregators, and NFT-specific APIs to cover the full spectrum of cryptocurrency data needs.
 
+6. **Resilient Processing**: Implementing robust memory management and cleanup processes to ensure stable operation even when processing complex documentation with problematic characters or heavy JavaScript rendering.
+
 ## Target Users
 
 1. **Cryptocurrency Developers**: Building applications that need to integrate with multiple cryptocurrency data sources.
@@ -65,6 +67,8 @@ The Crypto API Documentation Crawler delivers value by:
 4. **Comprehensive Coverage**: Offering a single system that covers the full spectrum of cryptocurrency data needs.
 
 5. **Future-Proofing**: Creating a system that can be easily updated as API documentation evolves and new providers emerge.
+
+6. **Reliable Operation**: Ensuring consistent performance through advanced memory management and cleanup processes, even when dealing with complex documentation sites like CoinMarketCap that may contain problematic characters or heavy JavaScript rendering.
 
 ## Market Context
 

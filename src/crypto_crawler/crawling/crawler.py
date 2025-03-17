@@ -154,7 +154,11 @@ async def check_chunk_exists(url: str, chunk_number: int) -> bool:
         result = supabase.table("crypto_api_site_pages").select("id").eq("url", url).eq("chunk_number", chunk_number).execute()
         return len(result.data) > 0
     except Exception as e:
-        logger.error(f"Error checking chunk existence: {e}")
+        # Extract API name from URL if possible
+        api_name = urlparse(url).netloc.split('.')[-2] if urlparse(url).netloc else "unknown"
+        # Sanitize error message before logging
+        sanitized_error = sanitize_text(str(e))
+        logger.log_general_error(api_name, url, f"Error checking chunk existence: {sanitized_error}")
         return False
 
 async def insert_chunk(chunk: ProcessedChunk):
@@ -251,8 +255,10 @@ async def process_and_store_document(url: str, markdown: str, api_name: str):
         ]
         await asyncio.gather(*insert_tasks)
     except Exception as e:
-        logger.log_general_error(api_name, url, f"Error processing document: {str(e)}")
-        print(f"Error processing {url}: {str(e)}")
+        # Sanitize error message before logging and printing
+        sanitized_error = sanitize_text(str(e))
+        logger.log_general_error(api_name, url, f"Error processing document: {sanitized_error}")
+        print(f"Error processing {url}: {sanitized_error}")
 
 async def crawl_with_rate_limit(
     crawler: AsyncWebCrawler, 
@@ -289,10 +295,12 @@ async def crawl_with_rate_limit(
             
             # If it's the last attempt or not a rate limit error, log and continue
             if attempt == api_config.max_retries or not is_rate_limit:
+                # Sanitize error message before logging
+                sanitized_error = sanitize_text(str(e))
                 if is_rate_limit:
-                    logger.log_rate_limit_error(api_config.name, url, str(e))
+                    logger.log_rate_limit_error(api_config.name, url, sanitized_error)
                 else:
-                    logger.log_general_error(api_config.name, url, str(e))
+                    logger.log_general_error(api_config.name, url, sanitized_error)
                 return None
                 
     return None
@@ -404,22 +412,24 @@ async def load_progress(api_name: str) -> List[str]:
                 data = json.load(f)
                 return data.get('completed_urls', [])
         except json.JSONDecodeError as e:
-            logger.error(f"Error loading progress file for {api_name}: {e}")
+            # Sanitize error message before logging
+            sanitized_error = sanitize_text(str(e))
+            logger.log_general_error(api_name, progress_file, f"Error loading progress file: {sanitized_error}")
             # Backup corrupted file and return empty list
             backup_file = f"{progress_file}.bak"
             os.rename(progress_file, backup_file)
-            logger.info(f"Backed up corrupted progress file to {backup_file}")
+            print(f"Backed up corrupted progress file to {backup_file}")
             return []
     return []
 
-async def cleanup_browser(crawler: AsyncWebCrawler):
+async def cleanup_browser(crawler: AsyncWebCrawler, api_config: Optional[CryptoApiConfig] = None):
     """Improved resource cleanup with multiple strategies."""
     try:
         # First try proper shutdown with timeout
         try:
             await asyncio.wait_for(crawler.close(), timeout=10)
         except (asyncio.TimeoutError, Exception) as e:
-            logger.error(f"Normal browser shutdown failed: {str(e)}")
+            print(f"Normal browser shutdown failed: {str(e)}")
         
         # Then kill any remaining Chrome processes
         for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
@@ -427,11 +437,11 @@ async def cleanup_browser(crawler: AsyncWebCrawler):
                 if proc.info['cmdline'] and any('chrome' in part.lower() for part in proc.info['cmdline']):
                     try:
                         proc.terminate()
-                        logger.info(f"Terminated Chrome process {proc.info['pid']}")
+                        print(f"Terminated Chrome process {proc.info['pid']}")
                     except psutil.NoSuchProcess:
                         pass
             except (psutil.AccessDenied, psutil.ZombieProcess, Exception) as e:
-                logger.error(f"Error checking process {proc.pid}: {str(e)}")
+                print(f"Error checking process {proc.pid}: {str(e)}")
                 
         # Clear Chromium temp directories
         temp_dirs = [
@@ -443,17 +453,22 @@ async def cleanup_browser(crawler: AsyncWebCrawler):
                 for path in glob.glob(pattern):
                     try:
                         shutil.rmtree(path, ignore_errors=True)
-                        logger.info(f"Cleaned up temp directory: {path}")
+                        print(f"Cleaned up temp directory: {path}")
                     except Exception as e:
-                        logger.error(f"Error cleaning temp directory {path}: {str(e)}")
+                        print(f"Error cleaning temp directory {path}: {str(e)}")
             except Exception as e:
-                logger.error(f"Error processing temp pattern {pattern}: {str(e)}")
+                print(f"Error processing temp pattern {pattern}: {str(e)}")
                 
         # Force garbage collection
         gc.collect()
                 
     except Exception as e:
-        logger.error(f"Cleanup error: {str(e)}")
+        # Sanitize error message before logging and printing
+        sanitized_error = sanitize_text(str(e))
+        if 'api_config' in locals():
+            logger.log_general_error(api_config.name, "cleanup", f"Cleanup error: {sanitized_error}")
+        else:
+            print(f"Cleanup error: {sanitized_error}")
 
 async def crawl_parallel(urls: List[str], api_config: CryptoApiConfig, max_concurrent: int = 5):
     """Crawl multiple URLs in parallel with dynamic batch sizing and concurrency based on memory usage."""
@@ -470,16 +485,33 @@ async def crawl_parallel(urls: List[str], api_config: CryptoApiConfig, max_concu
             "--disable-gpu",
             "--disable-dev-shm-usage",
             "--no-sandbox",
-            "--single-process",  # Single renderer process
             "--js-flags=--max-old-space-size=4096",  # 4GB JS heap limit
-            "--no-zygote",  # Disable zygote process
             "--no-first-run", 
             "--disable-setuid-sandbox",
             "--disable-accelerated-2d-canvas",
-            "--disable-site-isolation-trials"
+            # Remove problematic flags for SPAs
+            # "--single-process",  # Can cause issues with complex SPAs
+            # "--no-zygote",  # Can cause stability issues
+            # "--disable-site-isolation-trials"  # Can interfere with SPA rendering
         ],
     )
-    crawl_config = CrawlerRunConfig(cache_mode=CacheMode.BYPASS)
+    # Adaptive configuration based on site characteristics
+    # For known SPAs or sites with dynamic content, use more patient settings
+    is_spa = api_config.name in ["CoinDesk"] or any(pattern in api_config.base_url for pattern in [
+        "react", "vue", "angular", "nuxt", "next", "gatsby", "spa", "single-page"
+    ])
+    
+    # Use networkidle for SPAs to ensure content is fully loaded
+    wait_until = "networkidle" if is_spa else "domcontentloaded"
+    
+    # Adjust page_timeout based on site type
+    page_timeout = 60000 if is_spa else 30000  # 60s for SPAs, 30s for regular sites
+    
+    crawl_config = CrawlerRunConfig(
+        cache_mode=CacheMode.BYPASS,
+        wait_until=wait_until,
+        page_timeout=page_timeout
+    )
 
     # Start with a reasonable batch size
     current_batch_size = get_dynamic_batch_size()
@@ -525,17 +557,21 @@ async def crawl_parallel(urls: List[str], api_config: CryptoApiConfig, max_concu
                             completed_urls.append(url)
                             await save_progress(api_config.name, completed_urls)
                         elif result:
+                            # Sanitize error message before logging and printing
+                            sanitized_error = sanitize_text(result.error_message)
                             logger.log_general_error(
                                 api_config.name, 
                                 url, 
-                                f"Crawl failed: {result.error_message}"
+                                f"Crawl failed: {sanitized_error}"
                             )
-                            print(f"Failed: {url} - Error: {result.error_message}")
+                            print(f"Failed: {url} - Error: {sanitized_error}")
                         else:
                             print(f"Failed after retries: {url}")
                     except Exception as e:
-                        logger.log_general_error(api_config.name, url, f"Unexpected error: {str(e)}")
-                        print(f"Error processing {url}: {str(e)}")
+                        # Sanitize error message before logging and printing
+                        sanitized_error = sanitize_text(str(e))
+                        logger.log_general_error(api_config.name, url, f"Unexpected error: {sanitized_error}")
+                        print(f"Error processing {url}: {sanitized_error}")
                     finally:
                         # Force cleanup after each URL to prevent memory leaks
                         try:
@@ -549,7 +585,9 @@ async def crawl_parallel(urls: List[str], api_config: CryptoApiConfig, max_concu
                             # Force Python garbage collection
                             gc.collect()
                         except Exception as e:
-                            logger.error(f"Error during mid-URL cleanup: {str(e)}")
+                            # Sanitize error message before logging
+                            sanitized_error = sanitize_text(str(e))
+                            logger.log_general_error(api_config.name, url, f"Error during mid-URL cleanup: {sanitized_error}")
             
             # Process batch URLs in parallel with limited concurrency
             await asyncio.gather(*[process_url(url) for url in batch_urls])
@@ -558,12 +596,14 @@ async def crawl_parallel(urls: List[str], api_config: CryptoApiConfig, max_concu
             i += len(batch_urls)
             
         except Exception as e:
-            logger.error(f"Batch processing error: {str(e)}")
+            # Sanitize error message before logging
+            sanitized_error = sanitize_text(str(e))
+            logger.log_general_error(api_config.name, "batch_processing", f"Batch processing error: {sanitized_error}")
             # On error, still move forward to next batch to avoid getting stuck
             i += len(batch_urls)
         finally:
             # Cleanup browser after each batch
-            await cleanup_browser(crawler)
+            await cleanup_browser(crawler, api_config)
             
             # Force garbage collection after each batch
             gc.collect()

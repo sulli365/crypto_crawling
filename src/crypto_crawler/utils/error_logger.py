@@ -1,7 +1,50 @@
 #!/usr/bin/env python
 import os
+import sys
 from datetime import datetime
 from typing import Optional
+
+# Import the sanitize_text function from the crawler module
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+try:
+    from crypto_crawler.crawling.crawler import sanitize_text
+except ImportError:
+    # Fallback sanitize_text function in case of import issues
+    def sanitize_text(text: str) -> str:
+        """
+        Sanitize text to handle encoding issues.
+        Replace problematic Unicode characters with their ASCII equivalents or remove them.
+        """
+        # Common problematic character replacements
+        replacements = {
+            '\u2192': '->',  # → (right arrow)
+            '\u2190': '<-',  # ← (left arrow)
+            '\u2022': '*',   # • (bullet)
+            '\u2018': "'",   # ' (left single quote)
+            '\u2019': "'",   # ' (right single quote)
+            '\u201c': '"',   # " (left double quote)
+            '\u201d': '"',   # " (right double quote)
+            '\u2013': '-',   # – (en dash)
+            '\u2014': '--',  # — (em dash)
+            '\u00a0': ' ',   # non-breaking space
+        }
+        
+        # Replace known problematic characters
+        for char, replacement in replacements.items():
+            text = text.replace(char, replacement)
+        
+        # For any other characters that might cause issues, replace with '?'
+        # This is a fallback to ensure we don't crash on unknown characters
+        encoded_text = ''
+        for char in text:
+            try:
+                # Test if character can be encoded in the system's default encoding
+                char.encode(sys.stdout.encoding or 'utf-8')
+                encoded_text += char
+            except UnicodeEncodeError:
+                encoded_text += '?'
+        
+        return encoded_text
 
 class ErrorLogger:
     """Logger for crawling errors."""
@@ -21,25 +64,35 @@ class ErrorLogger:
         """Log an error to a markdown file."""
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
+        # Sanitize the error message to handle encoding issues
+        sanitized_error = sanitize_text(error)
+        sanitized_url = sanitize_text(url)
+        sanitized_api_name = sanitize_text(api_name)
+        
         # Create the log file path
-        log_file = os.path.join(self.log_dir, f"{api_name}_errors.md")
+        log_file = os.path.join(self.log_dir, f"{sanitized_api_name}_errors.md")
         
         # Check if file exists
         file_exists = os.path.exists(log_file)
         
-        with open(log_file, "a") as f:
-            # Write header if file is new
-            if not file_exists:
-                f.write(f"# Error Log for {api_name}\n\n")
+        try:
+            with open(log_file, "a", encoding="utf-8") as f:
+                # Write header if file is new
+                if not file_exists:
+                    f.write(f"# Error Log for {sanitized_api_name}\n\n")
+                    
+                # Write error entry
+                f.write(f"## Error at {timestamp}\n")
+                if error_type:
+                    f.write(f"**Type:** {sanitize_text(error_type)}\n")
+                f.write(f"**URL:** {sanitized_url}\n")
+                f.write(f"**Error:** {sanitized_error}\n\n")
                 
-            # Write error entry
-            f.write(f"## Error at {timestamp}\n")
-            if error_type:
-                f.write(f"**Type:** {error_type}\n")
-            f.write(f"**URL:** {url}\n")
-            f.write(f"**Error:** {error}\n\n")
-            
-        print(f"Logged error for {api_name} at {url}")
+            print(f"Logged error for {sanitized_api_name} at {sanitized_url}")
+        except Exception as e:
+            # If we still have issues writing to the file, print a fallback error message
+            print(f"Error logging to file: {str(e)}")
+            print(f"Original error for {sanitized_api_name}: {sanitized_error}")
         
     def log_rate_limit_error(self, api_name: str, url: str, error: str):
         """Log a rate limit error."""

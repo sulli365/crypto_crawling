@@ -36,11 +36,21 @@ flowchart TD
 flowchart LR
     APIs[(Crypto APIs)] --> Discover[URL Discovery]
     Discover --> Crawl[Content Crawling]
-    Crawl --> Chunk[Semantic Chunking]
+    Crawl --> Sanitize[Text Sanitization]
+    Sanitize --> Chunk[Semantic Chunking]
     Chunk --> Embed[Vector Embedding]
     Embed --> Store[Supabase Storage]
     Store --> Retrieve[Retrieval for RAG]
     Retrieve --> UI[Streamlit Interface]
+    
+    subgraph "Memory Management"
+    Monitor[Memory Monitoring] --> Adjust[Adjust Batch Size/Concurrency]
+    Adjust --> Cleanup[Resource Cleanup]
+    Cleanup --> GC[Garbage Collection]
+    end
+    
+    Monitor -.-> Crawl
+    Cleanup -.-> Crawl
 ```
 
 ## Project Structure
@@ -129,7 +139,12 @@ The crawling system is designed for efficiency, reliability, and respect for API
 - **Error Categorization**: Errors are categorized (rate limit, connection, parsing) for targeted handling.
 - **Batch Processing**: URLs are processed in batches to control memory usage and improve reliability.
 - **Progress Tracking**: Crawling progress is saved to enable resuming interrupted crawls.
-- **Browser Cleanup**: Improved browser cleanup with retry logic to prevent resource leaks.
+- **Browser Cleanup**: Multi-stage cleanup process including graceful shutdown, forced termination, and temp directory cleanup.
+- **Dynamic Resource Management**: Adaptive batch sizing and concurrency based on real-time memory usage monitoring.
+- **Text Sanitization**: Preprocessing of content to handle problematic characters that may cause browser hangs.
+- **Memory Optimization**: Forced garbage collection between batches and memory usage thresholds to prevent resource exhaustion.
+- **SPA Handling**: Adaptive configuration for Single Page Applications (SPAs) with special wait conditions and timeouts.
+- **Browser Configuration Optimization**: Removal of problematic browser flags that can interfere with SPA rendering.
 
 ### 4. Content Processing
 

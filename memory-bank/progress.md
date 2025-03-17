@@ -20,6 +20,9 @@
    - ✅ Batch processing with memory management
    - ✅ Progress tracking and resumable crawls
    - ✅ Browser cleanup with retry logic
+   - ✅ Dynamic batch sizing based on memory availability
+   - ✅ Text sanitization for problematic characters
+   - ✅ Multi-stage cleanup process for browser resources
 
 3. **Content Processing**
    - ✅ HTML to markdown conversion
@@ -71,7 +74,21 @@
    - ✅ Database storage
    - ✅ Retrieval via RAG agent
 
-2. **Other APIs**
+2. **CoinMarketCap API**
+   - ✅ URL discovery
+   - ✅ Content crawling with enhanced memory management
+   - ✅ Processing and chunking with text sanitization
+   - ✅ Database storage
+   - ✅ Retrieval via RAG agent
+
+3. **CoinDesk API**
+   - ✅ URL discovery
+   - ✅ Content crawling with SPA optimizations
+   - ✅ Processing and chunking
+   - ✅ Database storage
+   - 🔄 Retrieval via RAG agent
+
+4. **Other APIs**
    - ✅ Configuration generation for all 20+ APIs
    - 🔄 Initial testing with selected APIs
    - 🔄 Crawling optimization for different API structures
@@ -183,10 +200,10 @@
 ### Performance Optimization
 
 1. **Crawling Efficiency**
-   - Memory usage optimization
+   - Further memory usage optimization
    - Crawling speed improvements
-   - Batch processing refinement
-   - Resource monitoring and management
+   - Additional batch processing refinement
+   - Enhanced resource monitoring and management
 
 2. **Database Performance**
    - Index optimization
@@ -205,10 +222,11 @@
 ### Project Phase
 
 The project is currently in the **early development phase**, with focus on:
-1. Extending API coverage beyond CoinGecko
+1. Extending API coverage beyond CoinGecko and CoinMarketCap
 2. Deploying database functions for vector search and duplicate detection
 3. Enhancing the RAG agent capabilities
 4. Improving the Streamlit user interface
+5. Refining memory management and resource optimization
 
 ### Milestone Progress
 
@@ -218,12 +236,14 @@ The project is currently in the **early development phase**, with focus on:
    - Project structure reorganized
    - Main entry point created with comprehensive CLI
 
-2. **Milestone 2: Multi-API Support** - 45% Complete
+2. **Milestone 2: Multi-API Support** - 55% Complete
    - Configuration system in place
    - CoinGecko integration complete
+   - CoinMarketCap integration complete with enhanced memory management
    - Initial testing with additional APIs
    - Crawling improvements for reliability and performance
    - Progress tracking and resumable crawls implemented
+   - Dynamic resource management implemented
 
 3. **Milestone 3: RAG Agent** - 60% Complete
    - Agent framework implemented with pydantic-ai
@@ -247,10 +267,10 @@ The project is currently in the **early development phase**, with focus on:
    - Need to test functions with larger datasets
 
 2. **Memory Usage**
-   - Parallel crawling can consume significant memory
-   - Browser instance management needs optimization
-   - Batch size and concurrency settings need fine-tuning
-   - Resource monitoring during long crawling sessions
+   - Some APIs may still require further memory optimization
+   - Need to fine-tune memory thresholds for different environments
+   - Potential for additional cleanup optimizations
+   - Monitoring for long-term memory stability
 
 3. **Rate Limiting**
    - Different APIs have varying rate limit policies
@@ -279,7 +299,6 @@ The project is currently in the **early development phase**, with focus on:
    - Optimize query performance
 
 2. **Complete crawling of 5 major APIs**
-   - CoinMarketCap
    - CryptoCompare
    - Binance
    - Messari
@@ -298,7 +317,7 @@ The project is currently in the **early development phase**, with focus on:
    - Add visualization for API capabilities
 
 5. **Optimize Performance**
-   - Profile and optimize crawling memory usage
+   - Further refine dynamic resource allocation
    - Improve vector search performance
    - Implement caching for frequent queries
    - Optimize batch processing parameters

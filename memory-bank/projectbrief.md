@@ -11,6 +11,7 @@ The Crypto API Documentation Crawler is a specialized RAG (Retrieval-Augmented G
 3. **Efficient Vector Storage**: Store processed content in a vector database for semantic search capabilities.
 4. **Agentic RAG Interface**: Provide an intelligent interface for querying cryptocurrency API information.
 5. **Scalable Architecture**: Design a system that can handle the addition of new API providers with minimal configuration.
+6. **Robust Resource Management**: Implement dynamic memory management and cleanup processes to ensure stable operation during intensive crawling operations.
 
 ## Key Requirements
 
@@ -43,12 +44,16 @@ The Crypto API Documentation Crawler is a specialized RAG (Retrieval-Augmented G
 1. **Performance**
    - Optimize crawling speed with parallel processing
    - Minimize database query latency for real-time responses
-   - Efficient memory usage during crawling and processing
+   - Efficient memory usage during crawling and processing with dynamic resource allocation
+   - Adaptive batch sizing and concurrency based on system memory availability
+   - Proactive memory monitoring and cleanup to prevent resource exhaustion
 
 2. **Reliability**
    - Implement robust error handling and logging
    - Ensure system resilience against network failures and rate limits
    - Validate data integrity throughout the pipeline
+   - Handle problematic characters and encoding issues that may cause browser hangs
+   - Implement multi-stage cleanup processes to recover from browser failures
 
 3. **Maintainability**
    - Modular architecture for easy extension

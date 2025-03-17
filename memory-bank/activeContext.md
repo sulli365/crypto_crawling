@@ -4,10 +4,12 @@
 
 The project is currently in the early development phase, with a focus on establishing the core infrastructure for crawling, processing, and storing cryptocurrency API documentation. The immediate priorities are:
 
-1. **Extending API Coverage**: Building on the successful implementation with CoinGecko API to cover all 20+ cryptocurrency APIs.
-2. **Refining the RAG Agent**: Updating the agent to properly query and retrieve information from the crypto API documentation database.
-3. **Enhancing the User Interface**: Improving the Streamlit UI for a better user experience.
-4. **Database Function Deployment**: Deploying SQL functions for duplicate detection and vector search.
+1. **Extending API Coverage**: Building on the successful implementation with CoinGecko and CoinMarketCap APIs to cover all 20+ cryptocurrency APIs, with recent work on implementing CoinDesk API crawling (replacing CryptoCompare which was acquired by CoinDesk).
+2. **Improving SPA Crawling**: Enhancing the crawler to better handle Single Page Applications (SPAs) like the CoinDesk developer portal, which require special handling for JavaScript-rendered content.
+3. **Refining the RAG Agent**: Updating the agent to properly query and retrieve information from the crypto API documentation database.
+4. **Enhancing the User Interface**: Improving the Streamlit UI for a better user experience.
+5. **Database Function Deployment**: Deploying SQL functions for duplicate detection and vector search.
+6. **Resource Management Optimization**: Continuing to refine memory management, cleanup processes, and handling of problematic characters to ensure stable operation during intensive crawling operations.
 
 ## Recent Developments
 
@@ -123,9 +125,11 @@ The project is currently in the early development phase, with a focus on establi
 
 5. **Memory Management**:
    - Browser automation is memory-intensive
-   - Need to optimize batch size and concurrency settings
-   - Implementing better resource cleanup
-   - Monitoring memory usage during long crawling sessions
+   - Implemented dynamic batch sizing and concurrency based on system memory availability
+   - Enhanced resource cleanup with multi-stage process (graceful shutdown, forced termination, temp directory cleanup)
+   - Added text sanitization to handle problematic characters that cause browser hangs
+   - Implemented memory usage monitoring with configurable thresholds
+   - Added forced garbage collection between batches to prevent memory leaks
 
 ## Next Steps
 

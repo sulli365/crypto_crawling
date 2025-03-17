@@ -141,13 +141,21 @@ The system interacts with 20+ cryptocurrency API documentation sites, each with 
    - Many modern documentation sites rely heavily on JavaScript
    - Full browser rendering (via Playwright) is required
    - Increases resource usage compared to simple HTTP requests
-   - Single-page applications require special handling
+   - Single-page applications (SPAs) require special handling:
+     - Adaptive wait conditions ("networkidle" vs "domcontentloaded")
+     - Increased page timeouts for complex SPAs
+     - Removal of problematic browser flags that interfere with SPA rendering
+     - Automatic detection of SPAs based on URL patterns and site characteristics
+     - Dynamic configuration adjustments based on site type
 
 3. **Memory Usage**
    - Browser automation is memory-intensive
-   - Parallel crawling must be carefully managed to avoid OOM errors
-   - Batch processing is used to control memory consumption
-   - Browser cleanup is critical for long-running processes
+   - Dynamic batch sizing and concurrency based on real-time memory monitoring
+   - Adaptive resource allocation with configurable thresholds (MEMORY_THRESHOLD, SAFETY_BUFFER)
+   - Multi-stage browser cleanup process (graceful shutdown, forced termination, temp directory cleanup)
+   - Text sanitization to handle problematic Unicode characters that cause browser hangs
+   - Forced garbage collection between batches to prevent memory leaks
+   - Process monitoring using psutil for memory usage statistics
 
 4. **Token Limits**
    - OpenAI models have context window limits
@@ -203,10 +211,13 @@ The system interacts with 20+ cryptocurrency API documentation sites, each with 
    - Duplicate prevention and cleanup
 
 3. **Memory Management**
-   - Batch processing to control memory usage
-   - Resource monitoring during crawling
-   - Garbage collection optimization
-   - Browser cleanup with retry logic
+   - Dynamic batch sizing based on available system memory
+   - Real-time memory usage monitoring with configurable thresholds
+   - Proactive resource cleanup between batches
+   - Enhanced browser cleanup with multi-stage process
+   - Character sanitization to prevent browser hangs on problematic Unicode
+   - Forced garbage collection at strategic points in the pipeline
+   - Chrome process termination for hanging browser instances
 
 4. **Response Time**
    - Vector search optimization for sub-second query response
